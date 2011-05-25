@@ -18,7 +18,11 @@ TODO""",
       include_package_data=True,
       zip_safe=False,
       install_requires=[
-          # -*- Extra requirements: -*-
+          "pypubsub",
+          "timer2",
+          "yapsy",
+          "simpledaemon",
+          "pymongo",
       ],
       entry_points="""
       # -*- Entry points: -*-

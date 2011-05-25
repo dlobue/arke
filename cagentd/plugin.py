@@ -36,7 +36,7 @@ class collect_plugin(IPlugin):
             self._timer.cancel()
 
     def queue_run(self):
-        pub.sendMessage("run_queue", item=self.run)
+        pub.sendMessage("run_queue", item=('gather_data', (self.name, self.run)))
 
     def run(self):
         raise NotImplemented

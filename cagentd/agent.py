@@ -1,5 +1,4 @@
 
-import logging
 from Queue import Queue, Empty
 from time import sleep, time
 import shelve
@@ -35,6 +34,8 @@ class agent_daemon(simpledaemon.Daemon):
         if self.spool is None:
             self.spool = spool = shelve.open(
                 self.config_parser.get('core', 'spool_file'))
+        else:
+            spool = self.spool
 
         persist_backend = getattr(persist, '%s_backend' %
                 self.config_parser.get('core', 'persist_backend'))

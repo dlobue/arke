@@ -17,6 +17,7 @@ TODO""",
       packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
       include_package_data=True,
       zip_safe=False,
+      scripts=['bin/arke'],
       install_requires=[
           "pypubsub",
           "timer2",

@@ -13,7 +13,7 @@ import persist
 
 
 class agent_daemon(simpledaemon.Daemon):
-    default_conf = '/etc/cagentd/cagentd.conf'
+    default_conf = '/etc/arke/arke.conf'
     section = 'agent'
 
     def read_basic_config(self):

@@ -3,7 +3,7 @@ import sys, os
 
 version = '0.1'
 
-setup(name='cagentd',
+setup(name='arke',
       version=version,
       description="basic server agent for collecting stats",
       long_description="""\

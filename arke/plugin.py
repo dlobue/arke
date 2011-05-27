@@ -9,6 +9,7 @@ import config
 class collect_plugin(IPlugin):
     name = None
     default_config = {'interval': 30}
+    serialize = None
 
     @property
     def config(self):
@@ -42,7 +43,10 @@ class collect_plugin(IPlugin):
         config.queue_run(item=('gather_data', (self.name, self._run)))
 
     def _run(self):
-        return json.dumps(self.run())
+        if self.serialize.lower() == "json":
+            return json.dumps(self.run())
+        else:
+            return self.run()
 
     def run(self):
         raise NotImplemented

@@ -44,9 +44,9 @@ class collect_plugin(IPlugin):
 
     def _run(self):
         if self.serialize.lower() == "json":
-            return json.dumps(self.run())
+            return ('json', json.dumps(self.run()))
         else:
-            return self.run()
+            return ('raw', self.run())
 
     def run(self):
         raise NotImplemented

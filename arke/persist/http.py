@@ -1,5 +1,6 @@
 
 import httplib
+import logging
 
 from .base import ipersist
 
@@ -14,15 +15,16 @@ class http_backend(ipersist):
     def get_connection(self):
         return httplib.HTTPConnection(self.host, self.port)
 
-    def write(self, sourcetype, timestamp, data, hsh, hostname):
+    def write(self, sourcetype, timestamp, data, hostname):
         conn = self.get_connection()
         uri = '/store/%s/%s/%s' % (hostname, sourcetype, timestamp)
         #headers = {"Content-type": "", "Accept": "text/plain"}
         conn.request('PUT', uri, body=data)
         resp = conn.getresponse()
 
-        assert resp.status == 200, "Didn't get 200 from remote server"
-        assert resp.read() == hsh, "hash of data received by remote server differs from our hash"
-
-        return True
+        if resp.status == 200:
+            return True
+        else:
+            logging.warning("Didn't get 200 from remote server!")
+            return False
 

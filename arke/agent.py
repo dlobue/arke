@@ -82,18 +82,17 @@ class agent_daemon(simpledaemon.Daemon):
         logging.debug("gathering data for %s sourcetype" % sourcetype)
         timestamp = time()
         data = fnctn()
-        hsh = hashlib.md5(data).hexdigest()
-        key = '%s%s' % (timestamp,hsh)
-        spool[key] = (sourcetype, timestamp, data, hsh)
+        key = '%s%s' % (timestamp,sourcetype)
+        spool[key] = (sourcetype, timestamp, data)
         
         self.run_queue.put(('persist_data', key))
 
     def persist_data(self, key, spool, persist_backend):
-        (sourcetype, timestamp, data, hsh) = spool[key]
+        (sourcetype, timestamp, data) = spool[key]
         logging.debug("persisting data for %s sourcetype" % sourcetype)
 
         #XXX: queue for later, or do now?
-        if persist_backend.write(sourcetype, timestamp, data, hsh, self.hostname):
+        if persist_backend.write(sourcetype, timestamp, data, self.hostname):
             spool.pop(key)
         else:
             self.run_queue.put(('persist_data', key))

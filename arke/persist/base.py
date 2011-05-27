@@ -4,7 +4,7 @@ class ipersist(object):
         self.config = config_parser
         self.section = self.__class__.__name__.replace('_backend', '')
 
-    def write(self, sourcetype, timestamp, data, hsh, hostname):
+    def write(self, sourcetype, timestamp, data, hostname):
         """
         If the write fails (tbd by implementation), return False so the
         runner knows to reschedule.

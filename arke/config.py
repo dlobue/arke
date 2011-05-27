@@ -14,3 +14,9 @@ def get_config():
         raise NoSettings
     return main_object().config_parser
 
+def queue_run(item):
+    global main_object
+    if not main_object():
+        raise NoSettings
+    return main_object().run_queue.put(item)
+

@@ -5,9 +5,9 @@ from .base import ipersist
 
 class http_backend(ipersist):
     def __init__(self, *args, **kwargs):
-        super(http_backend, self).__init__()
-        self.host = self.config_parser.get(self.section, 'host')
-        self.port = self.config_parser.get(self.section, 'port')
+        super(http_backend, self).__init__(*args, **kwargs)
+        self.host = self.config.get(self.section, 'host')
+        #self.port = self.config.get(self.section, 'port', None)
 
     def get_connection(self):
         return httplib.HTTPConnection(self.host)

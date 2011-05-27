@@ -1,7 +1,8 @@
 
+import json
+
 from yapsy.IPlugin import IPlugin
 import timer2
-from pubsub import pub
 
 import config
 
@@ -30,13 +31,18 @@ class collect_plugin(IPlugin):
         msecs = secs * 1000 #convert to miliseconds
         self._timer = timer2.apply_interval(msecs, self.queue_run)
 
+        self.queue_run()
+
     def deactivate(self):
         super(collect_plugin, self).deactivate()
         if self._timer:
             self._timer.cancel()
 
     def queue_run(self):
-        pub.sendMessage("run_queue", item=('gather_data', (self.name, self.run)))
+        config.queue_run(item=('gather_data', (self.name, self._run)))
+
+    def _run(self):
+        return json.dumps(self.run())
 
     def run(self):
         raise NotImplemented

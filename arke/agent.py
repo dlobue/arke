@@ -1,11 +1,11 @@
 
 from Queue import Queue, Empty
 from time import sleep, time
+import logging
 import shelve
 import hashlib
 
 import simpledaemon
-from pubsub import pub
 from yapsy.PluginManager import PluginManager
 
 import config
@@ -25,23 +25,26 @@ class agent_daemon(simpledaemon.Daemon):
         self.run_queue = Queue()
         self.spool = None
         self.stop_now = False
-        pub.subscribe(self.run_queue.put, "run_queue")
 
     def on_sigterm(self, signalnum, frame):
+        logging.info("got sigterm")
         self.stop_now = True
 
     def run(self):
+        logging.debug("initializing spool")
         if self.spool is None:
             self.spool = spool = shelve.open(
                 self.config_parser.get('core', 'spool_file'))
         else:
             spool = self.spool
 
+        logging.debug("initializing backend %s" % self.config_parser.get('core', 'persist_backend'))
         persist_backend = getattr(persist, '%s_backend' %
                 self.config_parser.get('core', 'persist_backend'))
         persist_backend = persist_backend(config.get_config())
 
         if spool:
+            logging.info("found data already in spool. adding to queue")
             for key in spool:
                 self.persist_data(key, spool, persist_backend)
 
@@ -49,10 +52,12 @@ class agent_daemon(simpledaemon.Daemon):
         plugin_dirs = plugin_dirs.replace(',', ' ')
         plugin_dirs = plugin_dirs.split()
 
+        logging.debug("initializing plugin subsystem")
         plugin_manager = PluginManager(directories_list=plugin_dirs)
         plugin_manager.collectPlugins()
 
         for plugin_info in plugin_manager.getAllPlugins():
+            logging.debug("activating plugin %s" % plugin_info.name)
             plugin_manager.activatePluginByName(plugin_info.name)
 
         while 1:
@@ -61,16 +66,20 @@ class agent_daemon(simpledaemon.Daemon):
                 spool = None
                 break
 
+            logging.debug("going to get next item from queue")
             try:
                 action,item = self.run_queue.get(True, 30)
             except Empty:
+                logging.debug("didn't find squat. sleeping for a bit before trying again.")
                 sleep(1)
                 continue
 
+            logging.debug("got something! action >%s< item >%r<" % (action, item))
             getattr(self, action)(item, spool, persist_backend)
 
 
     def gather_data(self, (sourcetype,fnctn), spool, persist_backend):
+        logging.debug("gathering data for %s sourcetype" % sourcetype)
         timestamp = time()
         data = fnctn()
         hsh = hashlib.md5(data).hexdigest()
@@ -81,6 +90,7 @@ class agent_daemon(simpledaemon.Daemon):
 
     def persist_data(self, key, spool, persist_backend):
         (sourcetype, timestamp, data, hsh) = spool[key]
+        logging.debug("persisting data for %s sourcetype" % sourcetype)
 
         #XXX: queue for later, or do now?
         if persist_backend.write(sourcetype, timestamp, data, hsh, self.hostname):

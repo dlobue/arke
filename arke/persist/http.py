@@ -23,7 +23,7 @@ class http_backend(ipersist):
         try:
             headers = {"Content-type": self.content_type[data[0]]}
         except KeyError:
-            headers = None
+            headers = {}
 
         #headers = {"Content-type": "", "Accept": "text/plain"}
         conn.request('PUT', uri, body=data[1], headers=headers)

@@ -7,6 +7,8 @@ from arke.plugin import collect_plugin
 
 class system(collect_plugin):
     name = "system"
+    serialize = 'json'
+
     def run(self):
         logging.info("collecting %s data" % self.name)
         return dict(

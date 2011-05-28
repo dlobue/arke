@@ -43,7 +43,7 @@ class collect_plugin(IPlugin):
         config.queue_run(item=('gather_data', (self.name, self._run)))
 
     def _run(self):
-        if self.serialize.lower() == "json":
+        if self.serialize and self.serialize.lower() == "json":
             return ('json', json.dumps(self.run()))
         else:
             return ('raw', self.run())

@@ -23,24 +23,26 @@ class system(collect_plugin):
                 used_phymem=psutil.used_phymem(),
                 used_virtmem=psutil.used_virtmem(),
             ),
-            processes=[x for x in self._processes()]
+            processes=dict(self._processes())
         )
 
     def _processes(self):
         for process in psutil.process_iter():
-            if process.pid < 1:
+            try:
+                yield (process.pid,
+                        dict(
+                            name=process.name,
+                            cmdline=' '.join(process.cmdline),
+                            status=str(process.status),
+                            ppid=process.ppid,
+                            cpu_times=process.get_cpu_times()._asdict(),
+                            io_counters=process.get_io_counters()._asdict(),
+                            memory=process.get_memory_info()._asdict(),
+                            num_threads=process.get_num_threads(),
+                            connections=[c._asdict() for c in process.get_connections()],
+                            open_files=[f.path for f in process.get_open_files()],
+                        )
+                      )
+            except psutil.NoSuchProcess:
                 continue
-            yield dict(
-                name=process.name,
-                cmdline=' '.join(process.cmdline),
-                status=str(process.status),
-                pid=process.pid,
-                ppid=process.ppid,
-                cpu_times=process.get_cpu_times()._asdict(),
-                io_counters=process.get_io_counters()._asdict(),
-                memory=process.get_memory_info()._asdict(),
-                num_threads=process.get_num_threads(),
-                connections=[c._asdict() for c in process.get_connections()],
-                open_files=[f.path for f in process.get_open_files()],
-            )
 

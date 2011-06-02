@@ -13,14 +13,16 @@ class system(collect_plugin):
         logging.info("collecting %s data" % self.name)
         return dict(
             cpu_times=psutil.cpu_times()._asdict(),
-            #total_phymem=psutil.TOTAL_PHYMEM,
-            avail_phymem=psutil.avail_phymem(),
-            avail_virtmem=psutil.avail_virtmem(),
-            cached_phymem=psutil.cached_phymem(),
-            phymem_buffers=psutil.phymem_buffers(),
-            total_virtmem=psutil.total_virtmem(),
-            used_phymem=psutil.used_phymem(),
-            used_virtmem=psutil.used_virtmem(),
+            memory=dict(
+                total_phymem=psutil.TOTAL_PHYMEM,
+                avail_phymem=psutil.avail_phymem(),
+                avail_virtmem=psutil.avail_virtmem(),
+                cached_phymem=psutil.cached_phymem(),
+                phymem_buffers=psutil.phymem_buffers(),
+                total_virtmem=psutil.total_virtmem(),
+                used_phymem=psutil.used_phymem(),
+                used_virtmem=psutil.used_virtmem(),
+            ),
             processes=[x for x in self._processes()]
         )
 

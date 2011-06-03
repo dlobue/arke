@@ -4,11 +4,17 @@ from subprocess import Popen, PIPE
 from threading import Timer
 
 import psutil
+from psutil._pslinux import wrap_exceptions
 
 from arke.plugin import collect_plugin
 
 class ExProcess(psutil.Process):
     @property
+    def _process_name(self):
+        return self._platform_impl._process_name
+
+    @property
+    @wrap_exceptions
     def oom_score(self):
         with open('/proc/%i/oom_score' % self.pid, 'r') as f:
             return int(f.readline().strip())

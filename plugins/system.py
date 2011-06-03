@@ -58,7 +58,7 @@ class system(collect_plugin):
 
     def _file_handles(self):
         with open('/proc/sys/fs/file-nr', 'r') as f:
-            o,f,m = f.readline().split()
+            o,f,m = map(int, f.readline().split())
         return dict(
             open=o,
             free=f,

@@ -104,14 +104,15 @@ class system(collect_plugin):
         ifaces = {}
         with open('/proc/net/dev', 'r') as f:
 
-            columnLine = f[1]
+            f.readline()
+            columnLine = f.readline()
             _, receiveCols , transmitCols = columnLine.split("|")
             receiveCols = map(lambda a:"recv_"+a, receiveCols.split())
             transmitCols = map(lambda a:"trans_"+a, transmitCols.split())
 
             cols = receiveCols+transmitCols
 
-            for line in f[2:]:
+            for line in f:
                 #TODO: get config data and determine if iface should be skipped
                 #XXX: or detect if all values are 0 and if so, skip?
                 if ':' not in line: continue

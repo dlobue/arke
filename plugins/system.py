@@ -31,7 +31,7 @@ class system(collect_plugin):
         logging.info("collecting %s data" % self.name)
         return dict(
             cpu_times=psutil.cpu_times()._asdict(),
-            memory=dict(
+            mem=dict(
                 total_phymem=psutil.TOTAL_PHYMEM,
                 avail_phymem=psutil.avail_phymem(),
                 avail_virtmem=psutil.avail_virtmem(),
@@ -46,7 +46,7 @@ class system(collect_plugin):
                 ifaces=self._net_dev(),
                 proto=self._net_proto()
             ),
-            io_counters=self._io_stats(),
+            io=self._io_stats(),
             fs=self._fs_usage(),
             fh=self._file_handles(),
         )

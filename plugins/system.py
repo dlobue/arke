@@ -17,6 +17,9 @@ class ExProcess(psutil.Process):
 class system(collect_plugin):
     name = "system"
     serialize = 'json'
+    default_config = {'interval': 30,
+                      'io_stats': None
+                     }
 
     def run(self):
         logging.info("collecting %s data" % self.name)

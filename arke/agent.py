@@ -78,21 +78,39 @@ class agent_daemon(simpledaemon.Daemon):
             getattr(self, action)(item, spool, persist_backend)
 
 
-    def gather_data(self, (sourcetype,fnctn), spool, persist_backend):
-        logging.debug("gathering data for %s sourcetype" % sourcetype)
+    def gather_data(self, plugin, spool, persist_backend):
+        extra = {}
         timestamp = time()
-        data = fnctn()
-        key = '%s%s' % (timestamp,sourcetype)
-        spool[key] = (sourcetype, timestamp, data)
+        if plugin.timestamp_as_id:
+            #if the timestamp is going to be used as the id, then
+            #that means we're going to group multiple results into
+            #the same document. round the timestamp in order to ensure
+            #we catch everything.
+            offset = timestamp % plugin.get_setting('interval')
+            timestamp = timestamp - offset
+            extra['_id'] = timestamp
+
+        if plugin.custom_schema:
+            extra['custom'] = True
+
+        if plugin.serialize:
+            extra['ctype'] = plugin.serialize.lower()
+
+        sourcetype = plugin.name
+        logging.debug("gathering data for %s sourcetype" % sourcetype)
+        data = plugin()
+
+        key = '%s%s' % (timestamp, sourcetype)
+        spool[key] = (sourcetype, timestamp, data, extra)
         
         self.run_queue.put(('persist_data', key))
 
     def persist_data(self, key, spool, persist_backend):
-        (sourcetype, timestamp, data) = spool[key]
+        (sourcetype, timestamp, data, extra) = spool[key]
         logging.debug("persisting data for %s sourcetype" % sourcetype)
 
         #XXX: queue for later, or do now?
-        if persist_backend.write(sourcetype, timestamp, data, self.hostname):
+        if persist_backend.write(sourcetype, timestamp, data, self.hostname, extra):
             spool.pop(key)
         else:
             self.run_queue.put(('persist_data', key))

@@ -8,12 +8,21 @@ import config
 
 class collect_plugin(IPlugin):
     name = None
-    default_config = {'interval': 30}
     serialize = None
+    custom_schema = False
+    timestamp_as_id = False
+
+    default_config = {'interval': 30}
 
     @property
     def config(self):
         return config.get_config()
+
+    def get_setting(self, setting, fallback=None):
+        if self.config.has_option(self.name, setting):
+            return self.config.get(self.name, setting)
+        else:
+            return self.default_config.get(setting, fallback)
 
     def __init__(self):
         IPlugin.__init__(self)
@@ -24,11 +33,7 @@ class collect_plugin(IPlugin):
     def activate(self):
         super(collect_plugin, self).activate()
 
-        if self.config.has_option(self.name, "interval"):
-            secs = self.config.getint(self.name, "interval")
-        else:
-            secs = self.default_config['interval']
-
+        secs = self.get_setting('interval')
         msecs = secs * 1000 #convert to miliseconds
         self._timer = timer2.apply_interval(msecs, self.queue_run)
 
@@ -40,13 +45,13 @@ class collect_plugin(IPlugin):
             self._timer.cancel()
 
     def queue_run(self):
-        config.queue_run(item=('gather_data', (self.name, self._run)))
+        config.queue_run(item=('gather_data', self))
 
-    def _run(self):
+    def __call__(self):
         if self.serialize and self.serialize.lower() == "json":
-            return ('json', json.dumps(self.run()))
+            return json.dumps(self.run())
         else:
-            return ('raw', self.run())
+            return self.run()
 
     def run(self):
         raise NotImplemented

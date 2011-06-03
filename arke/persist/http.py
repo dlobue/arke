@@ -16,17 +16,16 @@ class http_backend(ipersist):
     def get_connection(self):
         return httplib.HTTPConnection(self.host, self.port)
 
-    def write(self, sourcetype, timestamp, data, hostname):
+    def write(self, sourcetype, timestamp, data, hostname, extra):
         conn = self.get_connection()
         uri = '/store/%s/%s/%s' % (hostname, sourcetype, timestamp)
 
-        try:
-            headers = {"Content-type": self.content_type[data[0]]}
-        except KeyError:
-            headers = {}
+        assert type(extra) is dict
+        headers = extra
+        if headers['ctype'] and "Content-type" not in headers:
+            headers['Content-type'] = self.ctype_map[headers['ctype']]
 
-        #headers = {"Content-type": "", "Accept": "text/plain"}
-        conn.request('PUT', uri, body=data[1], headers=headers)
+        conn.request('PUT', uri, body=data, headers=headers)
         resp = conn.getresponse()
 
         if resp.status == 200:

@@ -19,7 +19,6 @@ TODO""",
       zip_safe=False,
       scripts=['bin/arke'],
       install_requires=[
-          "pypubsub",
           "timer2",
           "yapsy",
           "simpledaemon",

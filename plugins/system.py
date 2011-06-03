@@ -28,7 +28,6 @@ class system(collect_plugin):
                      }
 
     def run(self):
-        logging.info("collecting %s data" % self.name)
         return dict(
             cpu_times=psutil.cpu_times()._asdict(),
             mem=dict(

@@ -1,6 +1,6 @@
 [Core]
-Name = system
-Module = system
+Name = mongodb
+Module = mongodb
 
 [Documentation]
 Description = What my plugin broadly does

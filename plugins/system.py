@@ -181,5 +181,7 @@ class system(collect_plugin):
 
         return results
             
-
+if __name__ == '__main__':
+    from pprint import pprint
+    pprint(system().run())
 

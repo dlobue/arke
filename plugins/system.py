@@ -7,6 +7,12 @@ import psutil
 
 from arke.plugin import collect_plugin
 
+class ExProcess(psutil.Process):
+    @property
+    def oom_score(self):
+        with open('/proc/%i/oom_score' % self.pid, 'r') as f:
+            return int(f.readline().strip())
+
 
 class system(collect_plugin):
     name = "system"
@@ -37,8 +43,9 @@ class system(collect_plugin):
         )
 
     def _processes(self):
-        for process in psutil.process_iter():
+        for pid in psutil.get_pid_list():
             try:
+                process = ExProcess(pid)
                 yield (process.pid,
                         dict(
                             name=process.name,
@@ -48,6 +55,7 @@ class system(collect_plugin):
                             cpu_times=process.get_cpu_times()._asdict(),
                             io_counters=process.get_io_counters()._asdict(),
                             memory=process.get_memory_info()._asdict(),
+                            oom_score=process.oom_score,
                             num_threads=process.get_num_threads(),
                             connections=[c._asdict() for c in process.get_connections()],
                             open_files=[f.path for f in process.get_open_files()],

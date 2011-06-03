@@ -3,13 +3,15 @@ from Queue import Queue, Empty
 from time import sleep, time
 import logging
 import shelve
-import hashlib
 
 import simpledaemon
 from yapsy.PluginManager import PluginManager
 
 import config
 import persist
+
+
+class NoPlugins(Exception): pass
 
 
 class agent_daemon(simpledaemon.Daemon):
@@ -56,9 +58,20 @@ class agent_daemon(simpledaemon.Daemon):
         plugin_manager = PluginManager(directories_list=plugin_dirs)
         plugin_manager.collectPlugins()
 
+        no_plugins_activated = True
         for plugin_info in plugin_manager.getAllPlugins():
+            if not (self.config_parser.has_option(plugin_info.name, 'enabled') and
+                self.config_parser.getboolean(plugin_info.name, 'enabled')):
+                logging.debug(("discovered plugin %s is not enabled. "
+                               "skipping activation") % plugin_info.name)
+                continue
+
             logging.debug("activating plugin %s" % plugin_info.name)
             plugin_manager.activatePluginByName(plugin_info.name)
+            no_plugins_activated = False
+
+        if no_plugins_activated:
+            raise NoPlugins("No plugins found or enabled.")
 
         while 1:
             if self.stop_now:

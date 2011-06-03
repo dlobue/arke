@@ -10,13 +10,13 @@ def set_main_object(mo):
 
 def get_config():
     global main_object
-    if not main_object():
+    if not main_object or not main_object():
         raise NoSettings
     return main_object().config_parser
 
 def queue_run(item):
     global main_object
-    if not main_object():
+    if not main_object or not main_object():
         raise NoSettings
     return main_object().run_queue.put(item)
 

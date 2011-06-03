@@ -17,10 +17,13 @@ class collect_plugin(IPlugin):
 
     @property
     def config(self):
-        return config.get_config()
+        try:
+            return config.get_config()
+        except config.NoSettings:
+            return None
 
     def get_setting(self, setting, fallback=None):
-        if self.config.has_option(self.name, setting):
+        if self.config and self.config.has_option(self.name, setting):
             return self.config.get(self.name, setting)
         else:
             return self.default_config.get(setting, fallback)

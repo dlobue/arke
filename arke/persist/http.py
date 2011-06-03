@@ -5,7 +5,9 @@ import logging
 from .base import ipersist
 
 class http_backend(ipersist):
-    content_type = {'json': 'application/json'}
+    content_type = {'json': 'application/json',
+                    'extjson': 'application/extjson'}
+
     def __init__(self, *args, **kwargs):
         super(http_backend, self).__init__(*args, **kwargs)
         self.host = self.config.get(self.section, 'host')

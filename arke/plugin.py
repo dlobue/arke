@@ -1,6 +1,7 @@
 
 import json
 
+from bson import json_util
 from yapsy.IPlugin import IPlugin
 import timer2
 
@@ -50,6 +51,8 @@ class collect_plugin(IPlugin):
     def __call__(self):
         if self.serialize and self.serialize.lower() == "json":
             return json.dumps(self.run())
+        elif self.serialize and self.serialize.lower() == "extjson":
+            return json.dumps(self.run(), default=json_util.default)
         else:
             return self.run()
 

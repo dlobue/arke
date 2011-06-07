@@ -69,13 +69,13 @@ class latency(collect_plugin):
             lag = time() - start
         except error, e:
             logging.error('socket error: %s for server %s' % (e, server['fqdn']))
-            lag = 0
+            lag = -1
         except gaierror, e:
             logging.error('socket gaierror: %s for server %s' % (e, server['fqdn']))
-            lag = 0
+            lag = -1
         except timeout, e:
             logging.warn('socket timeout: %s for server %s' % (e, server['fqdn']))
-            lag = 0
+            lag = -1
 
         if not self.hostname:
             self.hostname = self.config.get('core', 'hostname')

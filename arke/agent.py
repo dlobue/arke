@@ -1,11 +1,12 @@
 
-from Queue import Queue, Empty
-from time import sleep, time
+from Queue import Empty
+from time import time
 import logging
 import shelve
 
 import simpledaemon
 from yapsy.PluginManager import PluginManager
+from eventlet import Queue, GreenPool, sleep
 
 import config
 import persist
@@ -73,6 +74,8 @@ class agent_daemon(simpledaemon.Daemon):
         if no_plugins_activated:
             raise NoPlugins("No plugins found or enabled.")
 
+        pool = GreenPool(1000)
+
         while 1:
             if self.stop_now:
                 spool.close()
@@ -88,7 +91,7 @@ class agent_daemon(simpledaemon.Daemon):
                 continue
 
             logging.debug("got something! action >%s< item >%r<" % (action, item))
-            getattr(self, action)(item, spool, persist_backend)
+            pool.spawn_n(getattr(self, action), item, spool, persist_backend)
 
 
     def gather_data(self, plugin, spool, persist_backend):

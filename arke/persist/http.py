@@ -1,6 +1,8 @@
 
-import httplib
 import logging
+
+import eventlet
+httplib = eventlet.import_patched('httplib')
 
 from .base import ipersist
 

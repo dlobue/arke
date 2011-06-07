@@ -27,7 +27,10 @@ class latency(collect_plugin):
     custom_schema = True
     timestamp_as_id = True
     default_config = {'interval': 10,
-                      'port': 64007}
+                      'port': 64007,
+                      'server_concurrency': 1000,
+                      'server_backlog': 2048,
+                     }
 
     def activate(self):
         super(latency, self).activate()
@@ -38,7 +41,11 @@ class latency(collect_plugin):
             logging.debug("Got connection from: %s" % ':'.join(map(str, client_addr)))
             sock.recv(5)
             sock.sendall('PONG\n')
-        eventlet.spawn_n(eventlet.serve, eventlet.listen(('0.0.0.0', self.get_setting('port'))), handler)
+        eventlet.spawn_n(eventlet.serve,
+                         eventlet.listen(('0.0.0.0', self.get_setting('port')),
+                                         backlog=self.get_setting('server_backlog')),
+                         handler,
+                        concurrency=self.get_setting('server_concurrency'))
 
     def queue_run(self):
         sdb = boto.connect_sdb(*get_credentials())

@@ -16,6 +16,8 @@ class http_backend(ipersist):
         self.port = None
         if self.config.has_option(self.section, 'port'):
             self.port = self.config.get(self.section, 'port')
+        if self.config.has_option('core', 'debug'):
+            self.debug = self.config.getboolean('core', 'debug')
 
     def get_connection(self):
         return httplib.HTTPConnection(self.host, self.port)
@@ -32,6 +34,8 @@ class http_backend(ipersist):
         conn.request('PUT', uri, body=data, headers=headers)
         resp = conn.getresponse()
 
+        if self.debug:
+            assert resp.status == 200
         if resp.status == 200:
             return True
         else:

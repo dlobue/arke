@@ -29,7 +29,7 @@ class http_backend(ipersist):
         assert type(extra) is dict
         headers = extra
         if headers['ctype'] and "Content-type" not in headers:
-            headers['Content-type'] = self.ctype_map[headers['ctype']]
+            headers['Content-type'] = self.content_type[headers['ctype']]
 
         conn.request('PUT', uri, body=data, headers=headers)
         resp = conn.getresponse()

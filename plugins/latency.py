@@ -1,5 +1,5 @@
 
-from functools import partial
+#from functools import partial
 from time import time
 import json
 import logging
@@ -12,6 +12,7 @@ import eventlet
 import boto
 
 from arke.plugin import collect_plugin, config
+from arke.util import partial
 
 def get_credentials():
     confp = SafeConfigParser()
@@ -22,6 +23,7 @@ def get_credentials():
 class latency(collect_plugin):
     name = "latency"
     serialize = 'extjson'
+    hostname = None
     custom_schema = True
     timestamp_as_id = True
     default_config = {'interval': 10,
@@ -29,8 +31,11 @@ class latency(collect_plugin):
 
     def activate(self):
         super(latency, self).activate()
+        self._start_server()
+
+    def _start_server(self):
         def handler(sock, client_addr):
-            logging.debug("Got connection from: %s" % ':'.join(client_addr))
+            logging.debug("Got connection from: %s" % ':'.join(map(str, client_addr)))
             sock.recv(5)
             sock.sendall('PONG\n')
         eventlet.spawn_n(eventlet.serve, eventlet.listen(('0.0.0.0', self.get_setting('port'))), handler)
@@ -51,29 +56,44 @@ class latency(collect_plugin):
             return self.run(server)
 
     def run(self, server):
+        if 'ec2_public_hostname' in server:
+            host = server['ec2_public_hostname']
+        else:
+            host = server['fqdn']
+
         start = time()
         try:
-            sock = eventlet.connect((server, self.get_setting('port')))
+            sock = eventlet.connect((host, self.get_setting('port')))
             sock.sendall('PING\n')
             sock.recv(5)
             lag = time() - start
         except error, e:
-            logging.error('socket error: %s' % e)
+            logging.error('socket error: %s for server %s' % (e, server['fqdn']))
             lag = 0
         except gaierror, e:
-            logging.error('socket gaierror: %s' % e)
+            logging.error('socket gaierror: %s for server %s' % (e, server['fqdn']))
             lag = 0
         except timeout, e:
-            logging.warn('socket timeout: %s' % e)
+            logging.warn('socket timeout: %s for server %s' % (e, server['fqdn']))
             lag = 0
+
+        if not self.hostname:
+            self.hostname = self.config.get('core', 'hostname')
 
         d = {'$addToSet':
              {'data':
-              {'from': self.config.get('core', 'hostname'),
-               'to': server,
+              {'from': self.hostname,
+               'to': server['fqdn'],
                'lag': lag}
              }
             }
         return d
 
+
+if __name__ == '__main__':
+    from pprint import pprint
+    p = latency()
+    p.hostname = 'localhost'
+    p._start_server()
+    pprint(p.run({'fqdn': 'localhost'}))
 

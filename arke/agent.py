@@ -61,8 +61,8 @@ class agent_daemon(simpledaemon.Daemon):
 
         no_plugins_activated = True
         for plugin_info in plugin_manager.getAllPlugins():
-            if not (self.config_parser.has_option(plugin_info.name, 'enabled') and
-                self.config_parser.getboolean(plugin_info.name, 'enabled')):
+            if not (self.config_parser.has_option('plugin:%s' % plugin_info.name, 'enabled') and
+                    self.config_parser.getboolean('plugin:%s' % plugin_info.name, 'enabled')):
                 logging.debug(("discovered plugin %s is not enabled. "
                                "skipping activation") % plugin_info.name)
                 continue

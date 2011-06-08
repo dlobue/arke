@@ -23,8 +23,8 @@ class collect_plugin(IPlugin):
             return None
 
     def get_setting(self, setting, fallback=None):
-        if self.config and self.config.has_option(self.name, setting):
-            return self.config.get(self.name, setting)
+        if self.config and self.config.has_option('plugin:%s' % self.name, setting):
+            return self.config.get('plugin:%s' % self.name, setting)
         else:
             return self.default_config.get(setting, fallback)
 

@@ -2,7 +2,7 @@
 class ipersist(object):
     def __init__(self, config_parser):
         self.config = config_parser
-        self.section = self.__class__.__name__.replace('_backend', '')
+        self.section = 'backend:%s' % self.__class__.__name__.replace('_backend', '')
 
     def write(self, sourcetype, timestamp, data, hostname, extra):
         """

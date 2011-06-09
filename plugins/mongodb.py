@@ -1,4 +1,6 @@
 
+import logging
+
 import pymongo
 
 from arke.plugin import collect_plugin
@@ -17,11 +19,20 @@ class mongodb(collect_plugin):
                                         self.get_setting('port'))
         db = connection.admin
 
-        return dict(
-            server_status=db.command('serverStatus'),
-            repl_status=db.command('replSetGetStatus'),
-            col_stats=dict(self._coll_stats(connection))
-        )
+        try:
+            repl_status = db.command('replSetGetStatus')
+        except pymongo.errors.OperationFailure:
+            logging.debug("Mongodb server is not part of a replica set")
+            repl_status = None
+
+        try:
+            return dict(
+                server_status=db.command('serverStatus'),
+                repl_status=repl_status,
+                col_stats=dict(self._coll_stats(connection))
+            )
+        except Exception:
+            logging.exception("Error while collecting mongodb server status")
 
     def _coll_stats(self, connection):
         for db_name in connection.database_names():

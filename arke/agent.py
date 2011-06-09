@@ -67,7 +67,7 @@ class agent_daemon(simpledaemon.Daemon):
                                "skipping activation") % plugin_info.name)
                 continue
 
-            logging.debug("activating plugin %s" % plugin_info.name)
+            logging.info("activating plugin %s" % plugin_info.name)
             plugin_manager.activatePluginByName(plugin_info.name)
             no_plugins_activated = False
 

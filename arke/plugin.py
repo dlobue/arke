@@ -44,11 +44,24 @@ class collect_plugin(Component):
         except config.NoSettings:
             return None
 
-    def get_setting(self, setting, fallback=None):
+    def get_setting(self, setting, fallback=None, opt_type=None):
         if self.config and self.config.has_option(self.section, setting):
-            return self.config.get(self.section, setting)
+            try:
+                getter = {int: self.config.getint,
+                          float: self.config.getfloat,
+                          bool: self.config.getboolean,
+                         }[opt_type]
+            except KeyError:
+                getter = self.config.get
+            return getter(self.section, setting)
         else:
-            return self.default_config.get(setting, fallback)
+            val = self.default_config.get(setting, fallback)
+            if opt_type in (None, bool) or isinstance(val, opt_type):
+                return val
+            try:
+                val = opt_type(val)
+            except ValueError:
+                return val
 
     def __init__(self):
         self.is_activated = False
@@ -61,7 +74,7 @@ class collect_plugin(Component):
 
     @property
     def enabled(self):
-        return self.get_setting('enabled', False)
+        return self.get_setting('enabled', False, opt_type=bool)
 
     def activate(self):
         self.is_activated = True

@@ -3,7 +3,7 @@ from time import time
 import logging
 from ConfigParser import SafeConfigParser
 from os.path import expanduser
-from socket import error, timeout, gaierror
+from socket import error, timeout
 
 import eventlet
 import boto
@@ -77,17 +77,12 @@ class latency(collect_plugin):
             sock.recv(5)
             lag = time() - start
         except error, e:
-            logging.error('socket error: %s for server %s' % (e, server['fqdn']))
+            if type(e) is timeout:
+                log = logging.warn
+            else:
+                log = logging.error
+            log('socket %s: errno=%r, error msg=%s for server %s' % (e.__class__.__name__, e.errno, e.strerror, server['fqdn']))
             lag = -1
-        except gaierror, e:
-            logging.error('socket gaierror: %s for server %s' % (e, server['fqdn']))
-            lag = -1
-        except timeout, e:
-            logging.warn('socket timeout: %s for server %s' % (e, server['fqdn']))
-            lag = -1
-
-        if not self.hostname:
-            self.hostname = self.config.get('core', 'hostname')
 
         d = {'$addToSet':
              {'data':

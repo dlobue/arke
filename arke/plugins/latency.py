@@ -1,13 +1,10 @@
 
-#from functools import partial
 from time import time
-import json
 import logging
 from ConfigParser import SafeConfigParser
 from os.path import expanduser
 from socket import error, timeout, gaierror
 
-from bson import json_util
 import eventlet
 import boto
 
@@ -22,7 +19,7 @@ def get_credentials():
 
 class latency(collect_plugin):
     name = "latency"
-    serialize = 'extjson'
+    format = 'extjson'
     hostname = None
     custom_schema = True
     timestamp_as_id = True
@@ -42,25 +39,25 @@ class latency(collect_plugin):
             sock.recv(5)
             sock.sendall('PONG\n')
         eventlet.spawn_n(eventlet.serve,
-                         eventlet.listen(('0.0.0.0', self.get_setting('port')),
-                                         backlog=self.get_setting('server_backlog')),
+                         eventlet.listen(('0.0.0.0', int(self.get_setting('port'))),
+                                         backlog=int(self.get_setting('server_backlog'))),
                          handler,
-                        concurrency=self.get_setting('server_concurrency'))
+                        concurrency=int(self.get_setting('server_concurrency')))
 
     def queue_run(self):
+        if not self.hostname:
+            self.hostname = self.config.get('core', 'hostname')
+
         sdb = boto.connect_sdb(*get_credentials())
         domain = sdb.get_domain('chef')
         servers = domain.select('select fqdn,ec2_public_hostname from chef where fqdn is not null')
         for server in servers:
+            if server['fqdn'] == self.hostname:
+                continue
             config.queue_run(item=('gather_data', partial(self, server)))
 
     def __call__(self, server):
-        if self.serialize and self.serialize.lower() == "json":
-            return json.dumps(self.run(server))
-        elif self.serialize and self.serialize.lower() == "extjson":
-            return json.dumps(self.run(server), default=json_util.default)
-        else:
-            return self.run(server)
+        return self.serialize(self.run(server))
 
     def run(self, server):
         if 'ec2_public_hostname' in server:
@@ -70,7 +67,7 @@ class latency(collect_plugin):
 
         start = time()
         try:
-            sock = eventlet.connect((host, self.get_setting('port')))
+            sock = eventlet.connect((host, int(self.get_setting('port'))))
             sock.sendall('PING\n')
             sock.recv(5)
             lag = time() - start

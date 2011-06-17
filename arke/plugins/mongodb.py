@@ -7,7 +7,7 @@ from arke.plugin import collect_plugin
 
 class mongodb(collect_plugin):
     name = "mongodb"
-    serialize = 'extjson'
+    format = 'extjson'
 
     default_config = {'interval': 30,
                       'host': 'localhost',
@@ -16,7 +16,7 @@ class mongodb(collect_plugin):
 
     def run(self):
         connection = pymongo.Connection(self.get_setting('host'),
-                                        self.get_setting('port'))
+                                        int(self.get_setting('port')))
         db = connection.admin
 
         try:

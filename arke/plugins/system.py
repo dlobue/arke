@@ -22,7 +22,7 @@ class ExProcess(psutil.Process):
 
 class system(collect_plugin):
     name = "system"
-    serialize = 'json'
+    format = 'json'
     default_config = {'interval': 30,
                       'io_stats': None
                      }

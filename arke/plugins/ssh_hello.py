@@ -1,12 +1,10 @@
 
 from time import time
-import json
 import logging
 from ConfigParser import SafeConfigParser
 from os.path import expanduser
 from socket import error, timeout, gaierror
 
-from bson import json_util
 import eventlet
 import boto
 from paramiko.transport import Transport, SSHException
@@ -22,7 +20,7 @@ def get_credentials():
 
 class ssh_hello(collect_plugin):
     name = "ssh_hello"
-    serialize = 'json'
+    format = 'json'
     hostname = None
     custom_schema = True
     timestamp_as_id = True
@@ -43,12 +41,7 @@ class ssh_hello(collect_plugin):
             config.queue_run(item=('gather_data', partial(self, server)))
 
     def __call__(self, server):
-        if self.serialize and self.serialize.lower() == "json":
-            return json.dumps(self.run(server))
-        elif self.serialize and self.serialize.lower() == "extjson":
-            return json.dumps(self.run(server), default=json_util.default)
-        else:
-            return self.run(server)
+        return self.serialize(self.run(server))
 
 
     def run(self, server):

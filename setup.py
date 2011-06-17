@@ -18,7 +18,7 @@ setup(name='arke',
       zip_safe=False,
       scripts=['bin/arke'],
       install_requires=[
-          "timer2>=0.1.0",
+          "timer2>0.1.0",
           "giblets>=0.2.1",
           "simpledaemon>=1.0.1",
           "pymongo>=1.10",

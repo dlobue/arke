@@ -48,8 +48,13 @@ class latency(collect_plugin):
         if not self.hostname:
             self.hostname = self.config.get('core', 'hostname')
 
-        sdb = boto.connect_sdb(*get_credentials())
-        domain = sdb.get_domain('chef')
+        if not hasattr(self, 'sdb_domain'):
+            sdb = boto.connect_sdb(*get_credentials())
+            log = logging.getLogger('boto')
+            log.setLevel(logging.INFO)
+            self.sdb_domain = sdb.get_domain('chef')
+
+        domain = self.sdb_domain.get_domain('chef')
         servers = domain.select('select fqdn,ec2_public_hostname from chef where fqdn is not null')
         for server in servers:
             if server['fqdn'] == self.hostname:

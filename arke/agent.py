@@ -83,7 +83,7 @@ class agent_daemon(simpledaemon.Daemon):
 
             logging.debug("going to get next item from queue")
             try:
-                action,item = self.run_queue.get(True, 30)
+                action,item = self.run_queue.get(True, 5)
             except Empty:
                 logging.debug("didn't find squat. sleeping for a bit before trying again.")
                 sleep(1)

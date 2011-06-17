@@ -94,8 +94,12 @@ class agent_daemon(simpledaemon.Daemon):
 
 
     def gather_data(self, plugin, spool, persist_backend):
-        extra = {}
         timestamp = time()
+        sourcetype = plugin.name
+        #XXX: key needs to be generated before we normalize
+        key = '%f%s' % (timestamp, sourcetype)
+        extra = {}
+
         if plugin.timestamp_as_id:
             #if the timestamp is going to be used as the id, then
             #that means we're going to group multiple results into
@@ -111,11 +115,9 @@ class agent_daemon(simpledaemon.Daemon):
         if plugin.format:
             extra['ctype'] = plugin.format.lower()
 
-        sourcetype = plugin.name
         logging.debug("gathering data for %s sourcetype" % sourcetype)
         data = plugin()
 
-        key = '%s%s' % (timestamp, sourcetype)
         spool[key] = (sourcetype, timestamp, data, extra)
         
         self.run_queue.put(('persist_data', key))

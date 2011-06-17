@@ -5,11 +5,11 @@ import logging
 import shelve
 
 import simpledaemon
-from yapsy.PluginManager import PluginManager
 from eventlet import Queue, GreenPool, sleep
 
 import config
 import persist
+from plugin import get_plugin_manager
 
 
 class NoPlugins(Exception): pass
@@ -56,20 +56,19 @@ class agent_daemon(simpledaemon.Daemon):
         plugin_dirs = plugin_dirs.split()
 
         logging.debug("initializing plugin subsystem")
-        plugin_manager = PluginManager(directories_list=plugin_dirs)
-        plugin_manager.collectPlugins()
+        plugin_manager = get_plugin_manager(plugin_dirs)
 
         no_plugins_activated = True
-        for plugin_info in plugin_manager.getAllPlugins():
-            if not (self.config_parser.has_option('plugin:%s' % plugin_info.name, 'enabled') and
-                    self.config_parser.getboolean('plugin:%s' % plugin_info.name, 'enabled')):
+        for plugin in plugin_manager.collection_plugins:
+            if not plugin.enabled:
                 logging.debug(("discovered plugin %s is not enabled. "
-                               "skipping activation") % plugin_info.name)
+                               "skipping activation") % plugin.name)
                 continue
 
-            logging.info("activating plugin %s" % plugin_info.name)
-            plugin_manager.activatePluginByName(plugin_info.name)
+            logging.info("activating plugin %s" % plugin.name)
+            plugin.activate()
             no_plugins_activated = False
+
 
         if no_plugins_activated:
             raise NoPlugins("No plugins found or enabled.")
@@ -109,8 +108,8 @@ class agent_daemon(simpledaemon.Daemon):
         if plugin.custom_schema:
             extra['custom'] = True
 
-        if plugin.serialize:
-            extra['ctype'] = plugin.serialize.lower()
+        if plugin.format:
+            extra['ctype'] = plugin.format.lower()
 
         sourcetype = plugin.name
         logging.debug("gathering data for %s sourcetype" % sourcetype)

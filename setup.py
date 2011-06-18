@@ -17,6 +17,8 @@ setup(name='arke',
       include_package_data=True,
       zip_safe=False,
       scripts=['bin/arke'],
+      data_files=[('/etc/init', ['init_scripts/arke.conf']),
+                 ],
       install_requires=[
           "timer2>0.1.0",
           "giblets>=0.2.1",

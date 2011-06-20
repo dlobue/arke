@@ -54,8 +54,7 @@ class latency(collect_plugin):
             log.setLevel(logging.INFO)
             self.sdb_domain = sdb.get_domain('chef')
 
-        domain = self.sdb_domain.get_domain('chef')
-        servers = domain.select('select fqdn,ec2_public_hostname from chef where fqdn is not null')
+        servers = self.sdb_domain.select('select fqdn,ec2_public_hostname from chef where fqdn is not null')
         for server in servers:
             if server['fqdn'] == self.hostname:
                 continue

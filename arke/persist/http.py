@@ -18,6 +18,8 @@ class http_backend(ipersist):
             self.port = self.config.get(self.section, 'port')
         if self.config.has_option('core', 'debug'):
             self.debug = self.config.getboolean('core', 'debug')
+        else:
+            self.debug = False
 
     def get_connection(self):
         return httplib.HTTPConnection(self.host, self.port)

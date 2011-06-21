@@ -126,8 +126,14 @@ class agent_daemon(simpledaemon.Daemon):
         (sourcetype, timestamp, data, extra) = spool[key]
         logging.debug("persisting data for %s sourcetype" % sourcetype)
 
-        #XXX: queue for later, or do now?
-        if persist_backend.write(sourcetype, timestamp, data, self.hostname, extra):
+        try:
+            persist_successful = persist_backend.write(sourcetype, timestamp, data, self.hostname, extra)
+            persist_successful = True
+        except Exception:
+            logging.exception("Got an exception while trying to persist %s data. spool key: %s" % (sourcetype, key))
+            persist_successful = False
+
+        if persist_successful:
             spool.pop(key)
         else:
             self.run_queue.put(('persist_data', key))

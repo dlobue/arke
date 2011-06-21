@@ -26,6 +26,7 @@ class ssh_hello(collect_plugin):
     timestamp_as_id = True
     default_config = {'interval': 10,
                       'port': 22,
+                      'region': None,
                      }
 
     def queue_run(self):
@@ -38,7 +39,11 @@ class ssh_hello(collect_plugin):
             log.setLevel(logging.INFO)
             self.sdb_domain = sdb.get_domain('chef')
 
-        servers = self.sdb_domain.select('select fqdn,ec2_public_hostname from chef where fqdn is not null')
+        query = 'select fqdn,ec2_public_hostname from chef where fqdn is not null'
+        region = self.get_setting('region')
+        if region:
+            query += " and region = '%s'" % region
+        servers = self.sdb_domain.select(query)
         for server in servers:
             if server['fqdn'] == self.hostname:
                 continue

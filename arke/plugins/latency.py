@@ -27,6 +27,7 @@ class latency(collect_plugin):
                       'port': 64007,
                       'server_concurrency': 1000,
                       'server_backlog': 2048,
+                      'region': None,
                      }
 
     def activate(self):
@@ -54,7 +55,11 @@ class latency(collect_plugin):
             log.setLevel(logging.INFO)
             self.sdb_domain = sdb.get_domain('chef')
 
-        servers = self.sdb_domain.select('select fqdn,ec2_public_hostname from chef where fqdn is not null')
+        query = 'select fqdn,ec2_public_hostname from chef where fqdn is not null'
+        region = self.get_setting('region')
+        if region:
+            query += " and region = '%s'" % region
+        servers = self.sdb_domain.select(query)
         for server in servers:
             if server['fqdn'] == self.hostname:
                 continue

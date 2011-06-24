@@ -170,12 +170,12 @@ class system(collect_plugin):
             return None
 
         results = {}
-        cols = ('total', 'used', 'avail', 'percent', 'mount')
+        cols = ('filesystem', 'total', 'used', 'avail', 'percent')
         output = output.replace('%','').splitlines()
         for line in output[1:]:
             data = line.split()
-            fs = data.pop(0)
-            results[fs] = dict(zip(cols, map(numbify, data)))
+            mount = data.pop()
+            results[mount] = dict(zip(cols, map(numbify, data)))
 
         return results
             

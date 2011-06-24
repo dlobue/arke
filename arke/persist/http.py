@@ -1,5 +1,7 @@
 
 import logging
+import json
+from bson import json_util
 
 import eventlet
 httplib = eventlet.import_patched('httplib')
@@ -7,8 +9,10 @@ httplib = eventlet.import_patched('httplib')
 from .base import ipersist
 
 class http_backend(ipersist):
-    content_type = {'json': 'application/json',
-                    'extjson': 'application/extjson'}
+    content_type_map = {'json': 'application/json',
+                        'extjson': 'application/extjson',
+                        'bson': 'application/bson',
+                       }
 
     def __init__(self, *args, **kwargs):
         super(http_backend, self).__init__(*args, **kwargs)
@@ -26,21 +30,23 @@ class http_backend(ipersist):
 
     def write(self, sourcetype, timestamp, data, hostname, extra):
         conn = self.get_connection()
-        uri = '/store/%s/%s/%s' % (hostname, sourcetype, timestamp)
+        uri = '/store/%s/%s/%f' % (hostname, sourcetype, timestamp)
 
-        assert type(extra) is dict
-        headers = extra
-        if headers.get('ctype', None) and "Content-type" not in headers:
-            headers['Content-type'] = self.content_type[headers['ctype']]
+        headers = {}
+        if extra and isinstance(extra, dict):
+            if extra.get('ctype', None):
+                headers['Content-type'] = self.content_type_map[extra['ctype']]
+            headers['extra'] = json.dumps(extra, default=json_util.default)
 
         conn.request('PUT', uri, body=data, headers=headers)
         resp = conn.getresponse()
 
-        if self.debug:
-            assert resp.status == 200
         if resp.status == 200:
             return True
         else:
+            if self.debug:
+                logging.critical("Debug is enabled, and didn't get 200 from remote server. raising to prevent loop.")
+                assert resp.status == 200
             logging.warning("Didn't get 200 from remote server!")
             return False
 

@@ -1,7 +1,7 @@
 
 import json
 
-from bson import json_util
+from bson import json_util, BSON
 from giblets import Component, ComponentManager, ExtensionPoint, implements
 from giblets.policy import Blacklist
 from giblets.search import find_plugins_by_entry_point, find_plugins_in_path
@@ -97,12 +97,16 @@ class collect_plugin(Component):
         return self.serialize(self.run())
 
     def serialize(self, data):
-        if self.format and self.format.lower() == "json":
-            return json.dumps(data)
-        elif self.format and self.format.lower() == "extjson":
-            return json.dumps(data, default=json_util.default)
-        else:
+        if not self.format:
             return data
+
+        if self.format.lower() == "json":
+            return json.dumps(data)
+        elif self.format.lower() == "bson":
+            return BSON.encode(data)
+        elif self.format.lower() == "extjson":
+            return json.dumps(data, default=json_util.default)
+            
 
     def run(self):
         raise NotImplemented

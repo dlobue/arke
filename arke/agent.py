@@ -96,7 +96,7 @@ class agent_daemon(simpledaemon.Daemon):
     def gather_data(self, plugin, spool, persist_backend):
         timestamp = time()
         sourcetype = plugin.name
-        #XXX: key needs to be generated before we normalize
+        #key needs to be generated before we normalize
         key = '%f%s' % (timestamp, sourcetype)
         extra = {}
 
@@ -107,10 +107,10 @@ class agent_daemon(simpledaemon.Daemon):
             #we catch everything.
             offset = timestamp % plugin.get_setting('interval')
             timestamp = timestamp - offset
-            extra['_id'] = timestamp
+            extra['timestamp_as_id'] = True
 
         if plugin.custom_schema:
-            extra['custom'] = True
+            extra['custom_schema'] = True
 
         if plugin.format:
             extra['ctype'] = plugin.format.lower()

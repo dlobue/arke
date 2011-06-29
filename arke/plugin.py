@@ -79,7 +79,7 @@ class collect_plugin(Component):
     def activate(self):
         self.is_activated = True
 
-        secs = self.get_setting('interval')
+        secs = self.get_setting('interval', opt_type=int)
         msecs = secs * 1000 #convert to miliseconds
         self._timer = timer2.apply_interval(msecs, self.queue_run)
 

@@ -54,7 +54,7 @@ class system(collect_plugin):
         for pid in psutil.get_pid_list():
             try:
                 process = ExProcess(pid)
-                yield (process.pid,
+                yield (int(process.pid),
                         dict(
                             name=process.name,
                             cmdline=' '.join(process.cmdline),

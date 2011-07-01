@@ -1,23 +1,13 @@
 
 from time import time
 import logging
-from ConfigParser import SafeConfigParser
-from os.path import expanduser
 from socket import error, timeout
 
 import eventlet
-import boto
 
-from arke.plugin import collect_plugin, config
-from arke.util import partial
+from arke.plugin import multi_collect_plugin, config
 
-def get_credentials():
-    confp = SafeConfigParser()
-    confp.read(expanduser('~/.s3cfg'))
-    return (confp.get('default', 'access_key'),
-                     confp.get('default', 'secret_key'))
-
-class latency(collect_plugin):
+class latency(multi_collect_plugin):
     name = "latency"
     format = 'extjson'
     hostname = None
@@ -45,28 +35,13 @@ class latency(collect_plugin):
                          handler,
                         concurrency=int(self.get_setting('server_concurrency')))
 
-    def queue_run(self):
-        if not self.hostname:
-            self.hostname = self.config.get('core', 'hostname')
 
-        if not hasattr(self, 'sdb_domain'):
-            sdb = boto.connect_sdb(*get_credentials())
-            log = logging.getLogger('boto')
-            log.setLevel(logging.INFO)
-            self.sdb_domain = sdb.get_domain('chef')
+    def _run(self, server, start, host):
+        sock = eventlet.connect((host, int(self.get_setting('port'))))
+        sock.sendall('PING\n')
+        sock.recv(5)
+        return time() - start
 
-        query = 'select fqdn,ec2_public_hostname from chef where fqdn is not null'
-        region = self.get_setting('region')
-        if region:
-            query += " and region = '%s'" % region
-        servers = self.sdb_domain.select(query)
-        for server in servers:
-            if server['fqdn'] == self.hostname:
-                continue
-            config.queue_run(item=('gather_data', partial(self, server)))
-
-    def __call__(self, server):
-        return self.serialize(self.run(server))
 
     def run(self, server):
         if 'ec2_public_hostname' in server:
@@ -76,10 +51,7 @@ class latency(collect_plugin):
 
         start = time()
         try:
-            sock = eventlet.connect((host, int(self.get_setting('port'))))
-            sock.sendall('PING\n')
-            sock.recv(5)
-            lag = time() - start
+            lag = self._run(server, start, host)
         except error, e:
             if type(e) is timeout:
                 log = logging.warn

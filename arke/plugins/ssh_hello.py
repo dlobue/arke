@@ -1,24 +1,14 @@
 
 from time import time
 import logging
-from ConfigParser import SafeConfigParser
-from os.path import expanduser
 from socket import error, timeout
 
 import eventlet
-import boto
 from paramiko.transport import Transport, SSHException
 
-from arke.plugin import collect_plugin, config
-from arke.util import partial
+from arke.plugin import multi_collect_plugin, config
 
-def get_credentials():
-    confp = SafeConfigParser()
-    confp.read(expanduser('~/.s3cfg'))
-    return (confp.get('default', 'access_key'),
-                     confp.get('default', 'secret_key'))
-
-class ssh_hello(collect_plugin):
+class ssh_hello(multi_collect_plugin):
     name = "ssh_hello"
     format = 'json'
     hostname = None
@@ -29,29 +19,6 @@ class ssh_hello(collect_plugin):
                       'region': None,
                      }
 
-    def queue_run(self):
-        if not self.hostname:
-            self.hostname = self.config.get('core', 'hostname')
-
-        if not hasattr(self, 'sdb_domain'):
-            sdb = boto.connect_sdb(*get_credentials())
-            log = logging.getLogger('boto')
-            log.setLevel(logging.INFO)
-            self.sdb_domain = sdb.get_domain('chef')
-
-        query = 'select fqdn,ec2_public_hostname from chef where fqdn is not null'
-        region = self.get_setting('region')
-        if region:
-            query += " and region = '%s'" % region
-        servers = self.sdb_domain.select(query)
-        for server in servers:
-            if server['fqdn'] == self.hostname:
-                continue
-            config.queue_run(item=('gather_data', partial(self, server)))
-
-    def __call__(self, server):
-        return self.serialize(self.run(server))
-
 
     def run(self, server):
         if 'ec2_public_hostname' in server:
@@ -61,24 +28,13 @@ class ssh_hello(collect_plugin):
 
         start = time()
         try:
-            sock = eventlet.connect((host, self.get_setting('port')))
-
-            transport = Transport(sock)
-            transport.logger.setLevel(logging.WARNING)
-            transport.packetizer.write_all(transport.local_version + '\r\n')
-            transport._check_banner()
-            transport.packetizer.close()
-
-            lag = time() - start
+            lag = self._run(server, start, host)
         except error, e:
             if type(e) is timeout:
                 log = logging.warn
             else:
                 log = logging.error
             log('socket %s: errno=%r, error msg=%s for server %s' % (e.__class__.__name__, e.errno, e.strerror, server['fqdn']))
-            lag = -1
-        except SSHException, e:
-            logging.warn('ssh exception: %s for server %s' % (e, server['fqdn']))
             lag = -1
 
         d = {'$addToSet':
@@ -89,6 +45,24 @@ class ssh_hello(collect_plugin):
              }
             }
         return d
+
+    def _run(self, server, start, host):
+        try:
+            sock = eventlet.connect((host, int(self.get_setting('port'))))
+
+            transport = Transport(sock)
+            transport.logger.setLevel(logging.WARNING)
+            transport.packetizer.write_all(transport.local_version + '\r\n')
+            transport._check_banner()
+            transport.packetizer.close()
+
+            lag = time() - start
+        except SSHException, e:
+            logging.warn('ssh exception: %s for server %s' % (e, server['fqdn']))
+            lag = -1
+
+        return lag
+
 
 
 if __name__ == '__main__':

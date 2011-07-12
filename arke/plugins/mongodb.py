@@ -16,7 +16,7 @@ class mongodb(collect_plugin):
 
     def run(self):
         connection = pymongo.Connection(self.get_setting('host'),
-                                        int(self.get_setting('port')))
+                                        self.get_setting('port', opt_type=int))
         db = connection.admin
 
         try:

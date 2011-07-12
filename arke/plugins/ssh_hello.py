@@ -48,7 +48,7 @@ class ssh_hello(multi_collect_plugin):
 
     def _run(self, server, start, host):
         try:
-            sock = eventlet.connect((host, int(self.get_setting('port'))))
+            sock = eventlet.connect((host, self.get_setting('port', opt_type=int)))
 
             transport = Transport(sock)
             transport.logger.setLevel(logging.WARNING)

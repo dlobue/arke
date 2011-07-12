@@ -30,14 +30,14 @@ class latency(multi_collect_plugin):
             sock.recv(5)
             sock.sendall('PONG\n')
         eventlet.spawn_n(eventlet.serve,
-                         eventlet.listen(('0.0.0.0', int(self.get_setting('port'))),
-                                         backlog=int(self.get_setting('server_backlog'))),
+                         eventlet.listen(('0.0.0.0', self.get_setting('port', opt_type=int)),
+                                         backlog=self.get_setting('server_backlog', opt_type=int)),
                          handler,
-                        concurrency=int(self.get_setting('server_concurrency')))
+                        concurrency=self.get_setting('server_concurrency', opt_type=int))
 
 
     def _run(self, server, start, host):
-        sock = eventlet.connect((host, int(self.get_setting('port'))))
+        sock = eventlet.connect((host, self.get_setting('port', opt_type=int)))
         sock.sendall('PING\n')
         sock.recv(5)
         return time() - start

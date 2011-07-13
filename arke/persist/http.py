@@ -19,7 +19,7 @@ class http_backend(ipersist):
         self.host = self.config.get(self.section, 'host')
         self.port = None
         if self.config.has_option(self.section, 'port'):
-            self.port = self.config.get(self.section, 'port')
+            self.port = self.config.getint(self.section, 'port')
         if self.config.has_option('core', 'debug'):
             self.debug = self.config.getboolean('core', 'debug')
         else:

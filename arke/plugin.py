@@ -94,7 +94,7 @@ class collect_plugin(Component):
             self._timer.cancel()
 
     def queue_run(self):
-        config.queue_run(item=('gather_data', self))
+        config.queue_run(item=self)
 
     def __call__(self):
         return self.serialize(self.run())
@@ -141,7 +141,7 @@ class multi_collect_plugin(collect_plugin):
         for server in servers:
             if server['fqdn'] == self.hostname:
                 continue
-            config.queue_run(item=('gather_data', partial(self, server)))
+            config.queue_run(item=partial(self, server))
 
     def __call__(self, server):
         return self.serialize(self.run(server))

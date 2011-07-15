@@ -50,6 +50,8 @@ class mongodb(collect_plugin):
 
 
 if __name__ == '__main__':
+    from giblets import ComponentManager
+    cm = ComponentManager()
     from sys import argv
     try:
         host = argv[1]
@@ -66,7 +68,7 @@ if __name__ == '__main__':
         if port:
             mongodb.default_config['port'] = port
 
-    data = mongodb().run()
+    data = mongodb(cm).run()
     from pprint import pprint
     pprint(data)
 

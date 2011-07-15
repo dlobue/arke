@@ -181,5 +181,7 @@ class system(collect_plugin):
             
 if __name__ == '__main__':
     from pprint import pprint
-    pprint(system().run())
+    from giblets import ComponentManager
+    cm = ComponentManager()
+    pprint(system(cm).run())
 

@@ -66,6 +66,8 @@ class ssh_hello(multi_collect_plugin):
 
 
 if __name__ == '__main__':
+    from giblets import ComponentManager
+    cm = ComponentManager()
     from sys import argv
     port = 22
     try:
@@ -81,7 +83,7 @@ if __name__ == '__main__':
     ssh_hello.default_config['port'] = port
 
     from pprint import pprint
-    p = ssh_hello()
+    p = ssh_hello(cm)
     p.hostname = 'localhost'
     pprint(p.run({'fqdn': host}))
 

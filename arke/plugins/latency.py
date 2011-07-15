@@ -72,7 +72,9 @@ class latency(multi_collect_plugin):
 
 if __name__ == '__main__':
     from pprint import pprint
-    p = latency()
+    from giblets import ComponentManager
+    cm = ComponentManager()
+    p = latency(cm)
     p.hostname = 'localhost'
     p._start_server()
     pprint(p.run({'fqdn': 'localhost'}))

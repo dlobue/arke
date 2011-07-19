@@ -1,9 +1,11 @@
 
 import logging
+from datetime import datetime
 
 import psycopg2
 
-from arke.plugin import collect_plugin
+from arke.plugin import collect_plugin, config, timer2
+from arke.util import partial
 
 class postgresql(collect_plugin):
     name = "postgresql"
@@ -13,10 +15,13 @@ class postgresql(collect_plugin):
                       'host': 'localhost',
                       'port': 5432,
                       'database': 'postgres',
+                      'user': None,
+                      'password': None,
                      }
 
+
     def activate(self):
-        super(self.__class__, self).activate()
+        self.is_activated = True
         self.connection = psycopg2.connect(host=self.get_setting('host'),
                                            port=self.get_setting('port', opt_type=int),
                                            user=self.get_setting('user'),
@@ -24,13 +29,31 @@ class postgresql(collect_plugin):
                                            database=self.get_setting('database'),
                                           )
 
+        self.schedule_run()
+
+    def schedule_run(self):
+        next_run_kwargs = {'microsecond': 0}
+        interval_secs = self.get_setting('interval', opt_type=int)
+        now = datetime.now()
+        next_run_kwargs['second'] = (now.second - (now.second % interval_secs)) + interval_secs
+        if next_run_kwargs['second'] >= 60:
+            minutes = next_run_kwargs['second'] / 60
+            next_run_kwargs['minute'] = now.minute + minutes
+            next_run_kwargs['second'] -= 60 * minutes
+
+        next_run = now.replace(**next_run_kwargs)
+
+        self._timer = timer2.apply_at(next_run, self.queue_run)
+
     def run(self):
         cursor = self.connection.cursor()
-        #raises OperationalError on slave
-        cursor.execute('SELECT pg_current_xlog_location()')
+        try:
+            #raises OperationalError on slave
+            cursor.execute('SELECT pg_current_xlog_location()')
+        except psycopg2.OperationalError:
+            #returns none,none on solo and master
+            cursor.execute('SELECT pg_last_xlog_receive_location(), pg_last_xlog_replay_location()')
 
-        #returns none,none on solo and master
-        cursor.execute('SELECT pg_last_xlog_receive_location(), pg_last_xlog_replay_location()')
         data = cursor.fetchone()
         cursor.close()
 

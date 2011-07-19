@@ -3,6 +3,7 @@ from Queue import Empty
 from time import time
 import logging
 import shelve
+import signal
 
 import simpledaemon
 from eventlet import Queue, GreenPool, sleep, spawn
@@ -32,9 +33,18 @@ class agent_daemon(simpledaemon.Daemon):
         self.spool = None
         self.stop_now = False
 
+    def on_sighup(self, signalnum, frame):
+        logging.info("got sighup")
+        self.config_parser.read(self.default_conf)
+        self.load_plugins()
+
     def on_sigterm(self, signalnum, frame):
         logging.info("got sigterm")
         self.stop_now = True
+
+    def add_signal_handlers(self):
+        super(self.__class__, self).add_signal_handlers()
+        signal.signal(signal.SIGHUP, self.on_sighup)
 
     def run(self):
         logging.debug("initializing spool")
@@ -65,12 +75,18 @@ class agent_daemon(simpledaemon.Daemon):
         no_plugins_activated = True
         for plugin in self.plugin_manager.collection_plugins:
             if not plugin.enabled:
-                logging.debug(("discovered plugin %s is not enabled. "
+                if plugin.is_activated:
+                    logging.info(("active plugin %s is no longer enabled "
+                                  "- deactivating.") % plugin.name)
+                    plugin.deactivate()
+                else:
+                    logging.debug(("discovered plugin %s is not enabled. "
                                "skipping activation") % plugin.name)
                 continue
 
             logging.info("activating plugin %s" % plugin.name)
-            plugin.activate()
+            if not plugin.is_activated:
+                plugin.activate()
             no_plugins_activated = False
 
 

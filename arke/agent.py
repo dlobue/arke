@@ -119,7 +119,7 @@ class agent_daemon(simpledaemon.Daemon):
         if self.spool:
             logging.info("found data already in spool. adding to queue")
             for key in self.spool:
-                self.persist_queue.put(('persist_data', key))
+                self.persist_queue.put(key)
 
         pool = GreenPool(10)
 

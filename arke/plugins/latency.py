@@ -10,6 +10,7 @@ from arke.plugin import multi_collect_plugin, config
 class latency(multi_collect_plugin):
     name = "latency"
     format = 'extjson'
+    priority = 19
     hostname = None
     custom_schema = True
     timestamp_as_id = True

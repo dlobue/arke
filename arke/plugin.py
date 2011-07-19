@@ -37,6 +37,7 @@ class collect_plugin(Component):
     format = None
     custom_schema = False
     timestamp_as_id = False
+    priority = 100
 
     default_config = {'interval': 30}
 
@@ -94,7 +95,7 @@ class collect_plugin(Component):
             self._timer.cancel()
 
     def queue_run(self):
-        config.queue_run(item=self)
+        config.queue_run(item=(self.priority, self))
 
     def __call__(self):
         return self.serialize(self.run())
@@ -141,7 +142,7 @@ class multi_collect_plugin(collect_plugin):
         for server in servers:
             if server['fqdn'] == self.hostname:
                 continue
-            config.queue_run(item=partial(self, server))
+            config.queue_run(item=(self.priority, partial(self, server)))
 
     def __call__(self, server):
         return self.serialize(self.run(server))

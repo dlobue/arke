@@ -7,6 +7,7 @@ import signal
 
 import simpledaemon
 from eventlet import Queue, GreenPool, sleep, spawn
+from eventlet import PriorityQueue
 
 import config
 import persist
@@ -21,6 +22,7 @@ class NoPlugins(Exception): pass
 class agent_daemon(simpledaemon.Daemon):
     default_conf = '/etc/arke/arke.conf'
     section = 'agent'
+    vip = 10
 
     def read_basic_config(self):
         super(agent_daemon, self).read_basic_config()
@@ -28,7 +30,7 @@ class agent_daemon(simpledaemon.Daemon):
         config.set_main_object(self)
 
     def __init__(self):
-        self.run_queue = Queue()
+        self.run_queue = PriorityQueue()
         self.persist_queue = Queue()
         self.spool = None
         self.stop_now = False
@@ -102,12 +104,14 @@ class agent_daemon(simpledaemon.Daemon):
             if self.stop_now:
                 break
             try:
-                plugin = self.run_queue.get(True, 5)
+                pri, plugin = self.run_queue.get(True, 5)
             except Empty:
                 sleep(1)
                 continue
 
-            pool.spawn_n(self.gather_data, plugin, self.spool)
+            p = pool.spawn_n(self.gather_data, plugin, self.spool)
+            if pri < self.vip:
+                p.switch()
 
 
     def persist_runner(self):

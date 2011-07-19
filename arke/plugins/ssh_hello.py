@@ -11,6 +11,7 @@ from arke.plugin import multi_collect_plugin, config
 class ssh_hello(multi_collect_plugin):
     name = "ssh_hello"
     format = 'json'
+    priority = 20
     hostname = None
     custom_schema = True
     timestamp_as_id = True

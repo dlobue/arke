@@ -59,6 +59,12 @@ class postgresql(collect_plugin):
 
         return data
 
+    def __call__(self, data):
+        return self.serialize(data)
+
+    def queue_run(self):
+        data = self.run()
+        config.queue_run(item=partial(self, data))
 
 
 if __name__ == '__main__':

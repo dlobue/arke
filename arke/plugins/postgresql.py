@@ -46,16 +46,26 @@ class postgresql(collect_plugin):
         self._timer = timer2.apply_at(next_run, self.queue_run)
 
     def run(self):
+        return {'repl': self._repl(),
+               }
+
+    def _repl(self):
+        data = {'cur': None,
+                'rec': None,
+                'rep': None,
+               }
+
         cursor = self.connection.cursor()
         try:
             #raises OperationalError on slave
             cursor.execute('SELECT pg_current_xlog_location()')
+            data['cur'] = cursor.fetchone()[0]
         except psycopg2.OperationalError:
             #returns none,none on solo and master
             cursor.execute('SELECT pg_last_xlog_receive_location(), pg_last_xlog_replay_location()')
-
-        data = cursor.fetchone()
-        cursor.close()
+            data['rec'], data['rep'] = cursor.fetchone()
+        finally:
+            cursor.close()
 
         return data
 

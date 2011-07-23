@@ -36,5 +36,6 @@ setup(name='arke',
       system = arke.plugins.system
       ssh_hello = arke.plugins.ssh_hello
       mongodb = arke.plugins.mongodb
+      postgres_repl = arke.plugins.postgres_repl
       """,
       )

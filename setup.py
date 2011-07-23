@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 import sys, os
 
-version = '0.2.4'
+version = '0.2.5'
 
 setup(name='arke',
       version=version,
@@ -28,6 +28,7 @@ setup(name='arke',
           "psutil>=0.2.1",
           "paramiko",
           "boto>=2.0rc1",
+          "psycopg2>=2.0.13",
       ],
       entry_points="""
       # -*- Entry points: -*-

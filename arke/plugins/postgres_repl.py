@@ -62,15 +62,15 @@ class postgres_repl(collect_plugin):
             try:
                 #raises OperationalError on slave
                 cursor.execute('SELECT pg_current_xlog_location()')
-                masters = result.setdefault('masters', {})
-                masters[host] = cursor.fetchone()[0]
+                result['master'] = cursor.fetchone()[0]
             except psycopg2.OperationalError:
                 connection.rollback()
                 #returns none,none on solo and master
                 cursor.execute('SELECT pg_last_xlog_receive_location(), pg_last_xlog_replay_location()')
-                slaves = result.setdefault('slaves', {})
-                d = slaves.setdefault(host, {})
+                slaves = result.setdefault('slaves', [])
+                d = {'host': host}
                 d['r'], d['p'] = cursor.fetchone()
+                slaves.append(d)
             finally:
                 cursor.close()
 

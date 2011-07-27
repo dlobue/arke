@@ -40,7 +40,7 @@ class system(collect_plugin):
                 used_phymem=psutil.used_phymem(),
                 used_virtmem=psutil.used_virtmem(),
             ),
-            processes=dict(self._processes()),
+            processes=list(self._processes()),
             net=dict(
                 ifaces=self._net_dev(),
                 proto=self._net_proto()
@@ -54,21 +54,22 @@ class system(collect_plugin):
         for pid in psutil.get_pid_list():
             try:
                 process = ExProcess(pid)
-                yield (int(process.pid),
-                        dict(
-                            name=process.name,
-                            cmdline=' '.join(process.cmdline),
-                            status=str(process.status),
-                            ppid=process.ppid,
-                            cpu_times=process.get_cpu_times()._asdict(),
-                            io_counters=process.get_io_counters()._asdict(),
-                            memory=process.get_memory_info()._asdict(),
-                            oom_score=process.oom_score,
-                            num_threads=process.get_num_threads(),
-                            connections=[c._asdict() for c in process.get_connections()],
-                            open_files=[f.path for f in process.get_open_files()],
-                        )
-                      )
+                if not process.cmdline:
+                    continue
+                yield dict(
+                    name=process.name,
+                    cmdline=' '.join(process.cmdline),
+                    status=str(process.status),
+                    ppid=process.ppid,
+                    pid=process.pid,
+                    cpu_times=process.get_cpu_times()._asdict(),
+                    io_counters=process.get_io_counters()._asdict(),
+                    memory=process.get_memory_info()._asdict(),
+                    oom_score=process.oom_score,
+                    num_threads=process.get_num_threads(),
+                    connections=[c._asdict() for c in process.get_connections()],
+                    open_files=[f.path for f in process.get_open_files()],
+                )
             except psutil.NoSuchProcess:
                 continue
 

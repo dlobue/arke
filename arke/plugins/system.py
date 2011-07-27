@@ -112,12 +112,12 @@ class system(collect_plugin):
             cols = receiveCols+transmitCols
 
             for line in f:
-                #TODO: get config data and determine if iface should be skipped
-                #XXX: or detect if all values are 0 and if so, skip?
                 if ':' not in line: continue
                 iface, stats = line.split(":")
-                ifaceData = dict(zip(cols, map(int, stats.split())))
-                ifaces[iface.strip()] = ifaceData
+                ifaceData = map(int, stats.split())
+                if not any(ifaceData):
+                    continue
+                ifaces[iface.strip()] = dict(zip(cols, ifaceData))
 
         return ifaces
 

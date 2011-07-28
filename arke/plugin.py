@@ -137,6 +137,7 @@ class multi_collect_plugin(collect_plugin):
         region = self.get_setting('region')
         if region:
             query += " and ec2_region = '%s'" % region
+        logging.debug('looking for peers with the query: %s' % query)
         servers = self.sdb_domain.select(query)
         for server in servers:
             if server['fqdn'] == self.hostname:

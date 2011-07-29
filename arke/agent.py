@@ -158,7 +158,11 @@ class agent_daemon(simpledaemon.Daemon):
             extra['ctype'] = plugin.format.lower()
 
         logging.debug("gathering data for %s sourcetype" % sourcetype)
-        data = plugin()
+        try:
+            data = plugin()
+        except Exception, e:
+            logging.exception("error occurred while gathering data for sourcetype %s" % sourcetype)
+            raise e
 
         spool[key] = (sourcetype, timestamp, data, extra)
         

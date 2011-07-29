@@ -96,7 +96,7 @@ class agent_daemon(simpledaemon.Daemon):
 
 
     def gather_runner(self):
-        pool = GreenPool(100)
+        pool = GreenPool(1000)
 
         while 1:
             if self.stop_now:

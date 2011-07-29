@@ -121,7 +121,7 @@ class agent_daemon(simpledaemon.Daemon):
             for key in self.spool:
                 self.persist_queue.put(key)
 
-        pool = GreenPool(10)
+        pool = GreenPool(100)
 
         while 1:
             if self.stop_now:

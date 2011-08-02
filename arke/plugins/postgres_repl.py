@@ -1,8 +1,8 @@
 
 import logging
+from time import sleep
 
 import psycopg2
-from eventlet import sleep
 
 from arke.plugin import collect_plugin
 

@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 import sys, os
 
-version = '0.2.8'
+version = '0.3.0'
 
 setup(name='arke',
       version=version,
@@ -24,7 +24,7 @@ setup(name='arke',
           "giblets>=0.2.1",
           "simpledaemon>=1.0.1",
           "pymongo>=1.10",
-          "eventlet>=0.9.16",
+          "gevent>=0.13.6",
           "psutil>=0.2.1",
           "paramiko",
           "boto>=2.0rc1",

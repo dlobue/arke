@@ -3,7 +3,7 @@ from time import time
 import logging
 from socket import error, timeout
 
-import eventlet
+from gevent.socket import create_connection
 from paramiko.transport import Transport, SSHException
 
 from arke.plugin import multi_collect_plugin, config
@@ -48,7 +48,7 @@ class ssh_hello(multi_collect_plugin):
 
     def _run(self, server, start, host):
         try:
-            sock = eventlet.connect((host, self.get_setting('port', opt_type=int)))
+            sock = create_connection((host, self.get_setting('port', opt_type=int)))
 
             transport = Transport(sock)
             transport.logger.setLevel(logging.WARNING)

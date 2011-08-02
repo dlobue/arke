@@ -1,6 +1,8 @@
 
-import eventlet
-httplib = eventlet.import_patched('httplib')
+import httplib
+
+#import eventlet
+#httplib = eventlet.import_patched('httplib')
 
 from .http import http_backend
 

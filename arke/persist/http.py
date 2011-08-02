@@ -1,10 +1,12 @@
 
+import httplib
 import logging
 import json
+
 from bson import json_util
 
-import eventlet
-httplib = eventlet.import_patched('httplib')
+#import eventlet
+#httplib = eventlet.import_patched('httplib')
 
 from .base import ipersist
 

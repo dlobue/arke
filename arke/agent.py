@@ -1,12 +1,16 @@
 
-from Queue import Empty
+from Queue import Empty, Queue
 from time import time
 import logging
 import shelve
 import signal
 
 import simpledaemon
-from eventlet import Queue, GreenPool, sleep, spawn
+from gevent import monkey, spawn, sleep
+from gevent.pool import Pool
+#from eventlet import Queue, GreenPool, sleep, spawn
+
+monkey.patch_all(httplib=True)
 
 import config
 import persist
@@ -45,6 +49,7 @@ class agent_daemon(simpledaemon.Daemon):
     def add_signal_handlers(self):
         super(self.__class__, self).add_signal_handlers()
         signal.signal(signal.SIGHUP, self.on_sighup)
+        signal.signal(signal.SIGINT, self.on_sigterm)
 
     def run(self):
         logging.debug("initializing spool")
@@ -96,7 +101,7 @@ class agent_daemon(simpledaemon.Daemon):
 
 
     def gather_runner(self):
-        pool = GreenPool(1000)
+        pool = Pool(1000)
 
         while 1:
             if self.stop_now:
@@ -107,7 +112,7 @@ class agent_daemon(simpledaemon.Daemon):
                 sleep(1)
                 continue
 
-            pool.spawn_n(self.gather_data, plugin, self.spool)
+            pool.spawn(self.gather_data, plugin, self.spool)
 
 
     def persist_runner(self):
@@ -121,7 +126,7 @@ class agent_daemon(simpledaemon.Daemon):
             for key in self.spool:
                 self.persist_queue.put(key)
 
-        pool = GreenPool(100)
+        pool = Pool(100)
 
         while 1:
             if self.stop_now:
@@ -132,7 +137,7 @@ class agent_daemon(simpledaemon.Daemon):
                 sleep(1)
                 continue
 
-            pool.spawn_n(self.persist_data, item, self.spool, persist_backend)
+            pool.spawn(self.persist_data, item, self.spool, persist_backend)
 
 
     def gather_data(self, plugin, spool):

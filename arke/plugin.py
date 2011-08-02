@@ -4,6 +4,7 @@ from time import time
 import logging
 from socket import error, timeout
 
+from gevent import spawn
 from bson import json_util, BSON
 from giblets import Component, ComponentManager, ExtensionPoint, implements
 from giblets.policy import Blacklist
@@ -94,7 +95,9 @@ class collect_plugin(Component):
             self._timer.cancel()
 
     def queue_run(self):
-        config.queue_run(item=self)
+        spawn(config.main_object().gather_data, self, config.main_object().spool)
+        #self()
+        #config.queue_run(item=self)
 
     def __call__(self):
         return self.serialize(self.run())
@@ -142,7 +145,8 @@ class multi_collect_plugin(collect_plugin):
         for server in servers:
             if server['fqdn'] == self.hostname:
                 continue
-            config.queue_run(item=partial(self, server))
+            #config.queue_run(item=partial(self, server))
+            spawn(config.main_object().gather_data, partial(self, server), config.main_object().spool)
 
     def __call__(self, server):
         return self.serialize(self.run(server))

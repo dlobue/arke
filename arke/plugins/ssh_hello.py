@@ -9,7 +9,6 @@ from paramiko.transport import Transport, SSHException
 from arke.plugin import multi_collect_plugin, config
 
 class ssh_hello(multi_collect_plugin):
-    name = "ssh_hello"
     format = 'json'
     hostname = None
     custom_schema = True
@@ -20,7 +19,7 @@ class ssh_hello(multi_collect_plugin):
                      }
 
 
-    def run(self, server):
+    def collect(self, server):
         if 'ec2_public_hostname' in server:
             host = server['ec2_public_hostname']
         else:
@@ -28,7 +27,7 @@ class ssh_hello(multi_collect_plugin):
 
         start = time()
         try:
-            lag = self._run(server, start, host)
+            lag = self._collect(server, start, host)
         except error, e:
             if type(e) is timeout:
                 log = logging.warn
@@ -46,7 +45,7 @@ class ssh_hello(multi_collect_plugin):
             }
         return d
 
-    def _run(self, server, start, host):
+    def _collect(self, server, start, host):
         try:
             sock = create_connection((host, self.get_setting('port', opt_type=int)))
 
@@ -66,8 +65,8 @@ class ssh_hello(multi_collect_plugin):
 
 
 if __name__ == '__main__':
-    from giblets import ComponentManager
-    cm = ComponentManager()
+    #from giblets import ComponentManager
+    #cm = ComponentManager()
     from sys import argv
     port = 22
     try:
@@ -83,7 +82,7 @@ if __name__ == '__main__':
     ssh_hello.default_config['port'] = port
 
     from pprint import pprint
-    p = ssh_hello(cm)
+    p = ssh_hello()
     p.hostname = 'localhost'
-    pprint(p.run({'fqdn': host}))
+    pprint(p.collect({'fqdn': host}))
 

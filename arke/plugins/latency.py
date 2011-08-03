@@ -10,7 +10,6 @@ from gevent import spawn
 from arke.plugin import multi_collect_plugin, config
 
 class latency(multi_collect_plugin):
-    name = "latency"
     format = 'extjson'
     hostname = None
     custom_schema = True
@@ -38,14 +37,14 @@ class latency(multi_collect_plugin):
         spawn(self._server.serve_forever)
 
 
-    def _run(self, server, start, host):
+    def _collect(self, server, start, host):
         sock = create_connection((host, self.get_setting('port', opt_type=int)))
         sock.sendall('PING\n')
         sock.recv(5)
         return time() - start
 
 
-    def run(self, server):
+    def collect(self, server):
         if 'ec2_public_hostname' in server:
             host = server['ec2_public_hostname']
         else:
@@ -53,7 +52,7 @@ class latency(multi_collect_plugin):
 
         start = time()
         try:
-            lag = self._run(server, start, host)
+            lag = self._collect(server, start, host)
         except error, e:
             if type(e) is timeout:
                 log = logging.warn
@@ -74,10 +73,10 @@ class latency(multi_collect_plugin):
 
 if __name__ == '__main__':
     from pprint import pprint
-    from giblets import ComponentManager
-    cm = ComponentManager()
-    p = latency(cm)
+    #from giblets import ComponentManager
+    #cm = ComponentManager()
+    p = latency()
     p.hostname = 'localhost'
     p._start_server()
-    pprint(p.run({'fqdn': 'localhost'}))
+    pprint(p.collect({'fqdn': 'localhost'}))
 

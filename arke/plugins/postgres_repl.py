@@ -11,7 +11,6 @@ MAX_ATTEMPTS = 5
 class NoConnection(Exception): pass
 
 class postgres_repl(collect_plugin):
-    name = "postgres_repl"
     format = 'json'
 
     default_config = {'interval': 30,
@@ -70,7 +69,7 @@ class postgres_repl(collect_plugin):
                 conns[host].set_session(readonly=True, autocommit=True)
             yield host, conns[host]
 
-    def run(self, attempt=0):
+    def collect(self, attempt=0):
         result = {}
         for host,connection in self.iter_connections():
             cursor = connection.cursor()
@@ -107,8 +106,8 @@ class postgres_repl(collect_plugin):
 
 
 if __name__ == '__main__':
-    from giblets import ComponentManager
-    cm = ComponentManager()
+    #from giblets import ComponentManager
+    #cm = ComponentManager()
     from sys import argv
     try:
         user = argv[1]
@@ -133,7 +132,7 @@ if __name__ == '__main__':
         if port:
             postgres_repl.default_config['port'] = port
 
-    data = postgres_repl(cm).run()
+    data = postgres_repl().collect()
     from pprint import pprint
     pprint(data)
 

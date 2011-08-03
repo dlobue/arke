@@ -6,7 +6,6 @@ import pymongo
 from arke.plugin import collect_plugin
 
 class mongodb(collect_plugin):
-    name = "mongodb"
     format = 'extjson'
 
     default_config = {'interval': 30,
@@ -14,7 +13,7 @@ class mongodb(collect_plugin):
                       'port': 27017,
                      }
 
-    def run(self):
+    def collect(self):
         connection = pymongo.Connection(self.get_setting('host'),
                                         self.get_setting('port', opt_type=int),
                                         slave_okay=True,
@@ -52,8 +51,8 @@ class mongodb(collect_plugin):
 
 
 if __name__ == '__main__':
-    from giblets import ComponentManager
-    cm = ComponentManager()
+    #from giblets import ComponentManager
+    #cm = ComponentManager()
     from sys import argv
     try:
         host = argv[1]
@@ -70,7 +69,7 @@ if __name__ == '__main__':
         if port:
             mongodb.default_config['port'] = port
 
-    data = mongodb(cm).run()
+    data = mongodb().collect()
     from pprint import pprint
     pprint(data)
 

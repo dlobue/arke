@@ -1,6 +1,9 @@
 
 from ConfigParser import SafeConfigParser
 from os.path import expanduser
+from time import time
+
+from circuits.core import BaseComponent
 
 class partial(object):
     def __init__(self, obj, *args, **kwargs):
@@ -22,4 +25,20 @@ def get_credentials():
     confp.read(expanduser('~/.s3cfg'))
     return (confp.get('default', 'access_key'),
                      confp.get('default', 'secret_key'))
+
+
+
+
+class NormalizedTimer(BaseComponent):
+    def __init__(self, s, e, c="timer", t=None, persist=False, normalize=False):
+        self.normalize = normalize
+        super(NormalizedTimer, self).__init__(s=s, e=e, c=c, t=t, persist=persist)
+
+    def reset(self):
+        t = time()
+        s = self.s
+        if self.normalize:
+            s = (s - (t % s))
+
+        self._eTime = t + s
 

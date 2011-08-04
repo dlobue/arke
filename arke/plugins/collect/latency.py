@@ -9,7 +9,7 @@ from gevent.socket import create_connection
 from gevent.server import StreamServer
 from gevent import spawn
 
-from arke.plugins._multi import _multi_collect_plugin
+from arke.plugins.collect._multi import _multi_collect_plugin
 
 class Ponger(TCPServer):
     def read(self, sock, data):

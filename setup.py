@@ -33,10 +33,10 @@ setup(name='arke',
       entry_points="""
       # -*- Entry points: -*-
       [arke_plugins]
-      latency = arke.plugins.latency
-      system = arke.plugins.system
-      ssh_hello = arke.plugins.ssh_hello
-      mongodb = arke.plugins.mongodb
-      postgres_repl = arke.plugins.postgres_repl
+      latency = arke.plugins.collect.latency
+      system = arke.plugins.collect.system
+      ssh_hello = arke.plugins.collect.ssh_hello
+      mongodb = arke.plugins.collect.mongodb
+      postgres_repl = arke.plugins.collect.postgres_repl
       """,
       )

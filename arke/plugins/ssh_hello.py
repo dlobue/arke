@@ -1,49 +1,17 @@
 
 from time import time
 import logging
-from socket import error, timeout
 
 from gevent.socket import create_connection
 from paramiko.transport import Transport, SSHException
 
-from arke.plugin import multi_collect_plugin, config
+from arke.plugins._multi import _multi_collect_plugin
 
-class ssh_hello(multi_collect_plugin):
-    format = 'json'
-    hostname = None
-    custom_schema = True
-    timestamp_as_id = True
+class ssh_hello(_multi_collect_plugin):
     default_config = {'interval': 10,
                       'port': 22,
                       'region': None,
                      }
-
-
-    def collect(self, server):
-        if 'ec2_public_hostname' in server:
-            host = server['ec2_public_hostname']
-        else:
-            host = server['fqdn']
-
-        start = time()
-        try:
-            lag = self._collect(server, start, host)
-        except error, e:
-            if type(e) is timeout:
-                log = logging.warn
-            else:
-                log = logging.error
-            log('socket %s: errno=%r, error msg=%s for server %s' % (e.__class__.__name__, e.errno, e.strerror, server['fqdn']))
-            lag = -1
-
-        d = {'$addToSet':
-             {'data':
-              {'from': self.hostname,
-               'to': server['fqdn'],
-               'lag': lag}
-             }
-            }
-        return d
 
     def _collect(self, server, start, host):
         try:
@@ -57,7 +25,7 @@ class ssh_hello(multi_collect_plugin):
 
             lag = time() - start
         except SSHException, e:
-            logging.warn('ssh exception: %s for server %s' % (e, server['fqdn']))
+            logging.error('ssh exception: %s for server %s' % (e, server['fqdn']))
             lag = -1
 
         return lag

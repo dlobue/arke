@@ -11,8 +11,6 @@ MAX_ATTEMPTS = 5
 class NoConnection(Exception): pass
 
 class postgres_repl(collect_plugin):
-    format = 'json'
-
     default_config = {'interval': 30,
                       'hosts': 'localhost',
                       'port': 5432,

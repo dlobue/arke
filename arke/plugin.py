@@ -2,19 +2,27 @@
 import json
 from time import time
 import logging
-from socket import error, timeout
+from glob import glob
+import imp
+import os
+import sys
+
+
+try:
+    from pkg_resources import working_set
+    ENTRY_POINTS = True
+except ImportError:
+    working_set = None
+    ENTRY_POINTS = False
 
 from bson import json_util, BSON
 #from giblets import Component, ComponentManager, ExtensionPoint, implements
 #from giblets.policy import Blacklist
 #from giblets.search import find_plugins_by_entry_point, find_plugins_in_path
-import timer2
-import boto
-from circuits import Component, Event
+from circuits import Component, Event, Timer
 
-import config
-#from arke.interfaces import icollecter
-from arke.util import partial, get_credentials
+
+class GatherData(Event): pass
 
 
 def get_plugin_manager(search_paths=None):
@@ -35,10 +43,6 @@ def get_plugin_manager(search_paths=None):
 
 class collect_plugin(Component):
     #implements(icollecter)
-    format = None
-    custom_schema = False
-    timestamp_as_id = False
-
     default_config = {'interval': 30}
 
     @property
@@ -69,38 +73,31 @@ class collect_plugin(Component):
 
     def __init__(self):
         super(collect_plugin, self).__init__()
-        self.is_activated = False
         self.channel = self.name
-        #self.name = self.__class__.__name__
         self.section = 'plugin:%s' % self.name
         self._timer = None
         assert 'interval' in self.default_config, (
             "Missing default interval value for %s plugin" % self.name)
 
-
     @property
     def enabled(self):
         return self.get_setting('enabled', False, opt_type=bool)
 
-    def activate(self):
-        self.is_activated = True
+    @property
+    def is_registered(self):
+        if self.manager is not self and self in self.manager:
+            return True
+        return False
 
+    def registered(self):
         secs = self.get_setting('interval', opt_type=int)
-        msecs = secs * 1000 #convert to miliseconds
-        self._timer = timer2.apply_interval(msecs, self.queue_run)
+        self._timer = Timer(secs, GatherData, self.channel, persist=True).register(self)
 
-        self.queue_run()
-
-    def deactivate(self):
-        self.is_activated = False
+    def unregistered(self):
         if self._timer:
-            self._timer.cancel()
+            self._timer.unregister()
+            self._timer = None
 
-    def queue_run(self):
-        config.queue_run(item=self)
-
-    def __call__(self):
-        return self.serialize(self.collect())
 
     def serialize(self, data):
         if not self.format:
@@ -113,38 +110,15 @@ class collect_plugin(Component):
         elif self.format.lower() == "extjson":
             return json.dumps(data, default=json_util.default)
 
-    #if __name__ == '__main__':
-        #def started(self):
-            #self.fire(Event(), 'collect')
-
-    #def collect(self):
-        #raise NotImplemented
-
     def gather_data(self):
         timestamp = time()
         sourcetype = self.name
-        #key needs to be generated before we normalize
         key = '%f%s' % (timestamp, sourcetype)
         extra = {}
 
-        if self.timestamp_as_id:
-            #if the timestamp is going to be used as the id, then
-            #that means we're going to group multiple results into
-            #the same document. round the timestamp in order to ensure
-            #we catch everything.
-            offset = timestamp % self.get_setting('interval')
-            timestamp = timestamp - offset
-            extra['timestamp_as_id'] = True
-
-        if self.custom_schema:
-            extra['custom_schema'] = True
-
-        if self.format:
-            extra['ctype'] = self.format.lower()
-
-        logging.debug("gathering data for %s sourcetype" % sourcetype)
         try:
-            data = self.serialize(self.collect())
+            data = self.collect()
+            #data = self.serialize(self.collect())
             #data = plugin()
         except Exception, e:
             logging.exception("error occurred while gathering data for sourcetype %s" % sourcetype)
@@ -158,37 +132,170 @@ class collect_plugin(Component):
         
         self.persist_queue.put(key)
 
+    #def gather_data(self):
+        #timestamp = time()
+        #sourcetype = self.name
+        ##key needs to be generated before we normalize
+        #key = '%f%s' % (timestamp, sourcetype)
+        #extra = {}
 
-class multi_collect_plugin(collect_plugin):
-    format = 'json'
-    hostname = None
-    custom_schema = True
-    timestamp_as_id = True
-    default_config = {'interval': 10,
-                      'region': None,
-                     }
+        #if self.timestamp_as_id:
+            ##if the timestamp is going to be used as the id, then
+            ##that means we're going to group multiple results into
+            ##the same document. round the timestamp in order to ensure
+            ##we catch everything.
+            #offset = timestamp % self.get_setting('interval')
+            #timestamp = timestamp - offset
+            #extra['timestamp_as_id'] = True
 
-    def queue_run(self):
-        if not self.hostname:
-            self.hostname = self.config.get('core', 'hostname')
+        #if self.custom_schema:
+            #extra['custom_schema'] = True
 
-        if not hasattr(self, 'sdb_domain'):
-            sdb = boto.connect_sdb(*get_credentials())
-            log = logging.getLogger('boto')
-            log.setLevel(logging.INFO)
-            self.sdb_domain = sdb.get_domain('chef')
+        #if self.format:
+            #extra['ctype'] = self.format.lower()
 
-        query = 'select fqdn,ec2_public_hostname from chef where fqdn is not null'
-        region = self.get_setting('region')
-        if region:
-            query += " and ec2_region = '%s'" % region
-        logging.debug('looking for peers with the query: %s' % query)
-        servers = self.sdb_domain.select(query)
-        for server in servers:
-            if server['fqdn'] == self.hostname:
-                continue
-            config.queue_run(item=partial(self, server))
+        #logging.debug("gathering data for %s sourcetype" % sourcetype)
+        #try:
+            #data = self.serialize(self.collect())
+            ##data = plugin()
+        #except Exception, e:
+            #logging.exception("error occurred while gathering data for sourcetype %s" % sourcetype)
+            #raise e
 
-    def __call__(self, server):
-        return self.serialize(self.collect(server))
+
+        ##TODO: put stuff in spool
+        ##XXX: use spool as queue
+
+        #spool[key] = (sourcetype, timestamp, data, extra)
+        
+        #self.persist_queue.put(key)
+
+
+
+
+
+class plugin_manager(Component):
+    channel = "plugin_manager"
+
+    def __init__(self,
+                 init_args=None,
+                 init_kwargs=None,
+                 paths=None,
+                 entry_points=None,
+                 channel=channel):
+
+        super(plugin_manager, self).__init__(channel=channel)
+
+        self._init_args = init_args or tuple()
+        self._init_kwargs = init_kwargs or dict()
+        self._paths = paths
+        self._entry_points = entry_points
+        self._modules = set()
+        self._plugins = set()
+
+    def load_entry_points(self):
+        if not ENTRY_POINTS:
+            logging.debug("entry points disabled - unable to import pkg_resources")
+            return
+
+        entry_points = self._entry_points
+        if not hasattr(entry_points, '__iter__'):
+            entry_points = [entry_points]
+            
+        for entry_point_id in entry_points:
+            for entry in working_set.iter_entry_points(entry_point_id):
+                logging.debug('Loading plugin %s from %s', entry.name, entry.dist.location)
+
+                try:
+                    module = entry.load(require=True)
+                    self._modules.add(module)
+                except:
+                    logging.exception("Error loading plugin %s from %s" % (entry.name, entry.dist.location))
+
+    def load_paths(self):
+        paths = self._paths
+        if not hasattr(paths, '__iter__'):
+            paths = [paths]
+            
+        for path in paths:
+            logging.debug("searching for plugins in %s" % path)
+            for py_file in glob(os.path.join(path, '*.py')):
+                try:
+                    module_name = os.path.basename(py_file[:-3])
+                    # if it's already loaded, move on 
+                    if module_name in sys.modules:
+                        self._modules.add(sys.modules[module_name])
+                        continue
+                    
+                    logging.debug("Loading module %s" % py_file)
+                    module = imp.load_source(module_name, py_file)
+                    self._modules.add(module)
+                except Exception:
+                    logging.exception("Error loading module %s" % os.path.join(path, py_file))
+
+
+
+
+    def load(self, base_class):
+        modules = self._modules
+        module = safeimport(name)
+        if module is not None:
+
+            test = lambda x: isclass(x) \
+                    and issubclass(x, BaseComponent) \
+                    and getmodule(x) is module
+            components = [x[1] for x in getmembers(module, test)]
+
+            if components:
+                TheComponent = components[0]
+
+                component = TheComponent(
+                    *self._init_args,
+                    **self._init_kwargs
+                )
+
+                if self._auto_register:
+                    component.register(self)
+
+                return component
+
+
+def find_plugins_in_path(search_path):
+    """
+    Discover plugins in any .py files in the given on-disk locations eg:
+    
+    find_plugins_in_path("/path/to/mymodule/plugins")
+    find_plugins_in_path(["/path/to/mymodule/plugins", "/some/more/plugins"])
+    
+    """
+    if isinstance(search_path, basestring):
+        search_path = [search_path]
+
+    for path in search_path:
+        log.debug("searching for plugins in %s" % search_path)
+        for py_file in glob(os.path.join(path, '*.py')):
+            try:
+                module_name = os.path.basename(py_file[:-3])
+                # if it's already loaded, move on 
+                if module_name in sys.modules:
+                    continue
+                
+                log.debug("Loading module %s" % py_file)
+                module = imp.load_source(module_name, py_file)
+            except:
+                log.error("Error loading module %s: %s" % (os.path.join(path, py_file), traceback.format_exc()))
+
+
+
+    def find_plugins_by_entry_point(entry_point_id, ws=master_working_set):
+        for entry in ws.iter_entry_points(entry_point_id):
+            log.debug('Loading plugin %s from %s', entry.name, entry.dist.location)
+
+            try:
+                entry.load(require=True)
+            except:
+                import traceback
+                log.error("Error loading plugin %s from %s: %s" % (entry.name, entry.dist.location, traceback.format_exc()))
+        
+
 

@@ -6,18 +6,20 @@ import pymongo
 from arke.plugin import collect_plugin
 
 class mongodb(collect_plugin):
-    format = 'extjson'
-
     default_config = {'interval': 30,
                       'host': 'localhost',
                       'port': 27017,
                      }
 
     def collect(self):
-        connection = pymongo.Connection(self.get_setting('host'),
-                                        self.get_setting('port', opt_type=int),
-                                        slave_okay=True,
-                                       )
+        if not hasattr(self, 'connection'):
+            self.connection = pymongo.Connection(
+                self.get_setting('host'),
+                self.get_setting('port', opt_type=int),
+                slave_okay=True,
+            )
+        connection = self.connection
+
         db = connection.admin
 
         try:

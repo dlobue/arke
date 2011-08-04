@@ -2,6 +2,8 @@
 from time import time
 import logging
 
+logger = logging.getLogger(__name__)
+
 from circuits import handler
 from circuits.net.sockets import TCPServer, Write, Close
 
@@ -18,7 +20,6 @@ class Ponger(TCPServer):
 
 
 class latency(MultiCollect):
-    hostname = None
     default_config = {'interval': 10,
                       'port': 64007,
                       'server_concurrency': 1000,
@@ -26,26 +27,26 @@ class latency(MultiCollect):
                       'region': None,
                      }
 
-    #def activate(self):
-        #super(latency, self).activate()
-        #self._start_server()
-
     @handler("registered")
-    def _start_server(self):
-        if not hasattr(self, '_server') or self._server is None:
+    def _start_server(self, component, manager):
+        if manager is not self and manager is self.manager \
+           and component is self and not hasattr(self, '_server') \
+           or self._server is None:
             self._server = Ponger(
                 self.get_setting('port', opt_type=int),
                 backlog=self.get_setting('server_backlog', opt_type=int)
             ).register(self)
 
     @handler("unregister")
-    def _stop_server(self):
-        if hasattr(self, '_server') and self._server is not None:
+    def _stop_server(self, component, manager):
+        if manager is not self and manager is self.manager \
+           and component is self and hasattr(self, '_server') \
+           and self._server is not None:
             self._server.stop()
 
     #def _start_server(self):
         #def handler(sock, client_addr):
-            #logging.debug("Got connection from: %s" % ':'.join(map(str, client_addr)))
+            #logger.debug("Got connection from: %s" % ':'.join(map(str, client_addr)))
             #sock.recv(5)
             #sock.sendall('PONG\n')
         #self._server = StreamServer(
@@ -65,10 +66,7 @@ class latency(MultiCollect):
 
 if __name__ == '__main__':
     from pprint import pprint
-    #from giblets import ComponentManager
-    #cm = ComponentManager()
     p = latency()
-    p.hostname = 'localhost'
     p._start_server()
-    pprint(p.collect({'fqdn': 'localhost'}))
+    pprint(p.collect({'fqdn': 'localhost'}, 'localhost'))
 

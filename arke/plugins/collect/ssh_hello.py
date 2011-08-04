@@ -2,6 +2,8 @@
 from time import time
 import logging
 
+logger = logging.getLogger(__name__)
+
 from gevent.socket import create_connection
 from paramiko.transport import Transport, SSHException
 
@@ -25,7 +27,7 @@ class ssh_hello(MultiCollect):
 
             lag = time() - start
         except SSHException, e:
-            logging.error('ssh exception: %s for server %s' % (e, server['fqdn']))
+            logger.error('ssh exception: %s for server %s' % (e, server['fqdn']))
             lag = -1
 
         return lag
@@ -33,8 +35,6 @@ class ssh_hello(MultiCollect):
 
 
 if __name__ == '__main__':
-    #from giblets import ComponentManager
-    #cm = ComponentManager()
     from sys import argv
     port = 22
     try:
@@ -51,6 +51,5 @@ if __name__ == '__main__':
 
     from pprint import pprint
     p = ssh_hello()
-    p.hostname = 'localhost'
-    pprint(p.collect({'fqdn': host}))
+    pprint(p.collect({'fqdn': host}, 'hostname'))
 

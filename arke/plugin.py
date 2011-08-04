@@ -19,8 +19,6 @@ except ImportError:
 from circuits import Component, Event
 
 
-
-
 class plugin_manager(Component):
     channel = "plugin_manager"
 

@@ -75,6 +75,7 @@ class MultiCollect(Collect):
         timestamp = timestamp - (timestamp % self.get_setting('interval'))
 
         hostname = self.root.call(Event('core', 'hostname'), 'get', target='config')
+        logger.debug("sourcetype: %r, timestamp: %r, extra: %r" % (sourcetype, timestamp, extra))
 
         for server in self.iter_servers():
             if server['fqdn'] == hostname:
@@ -84,18 +85,13 @@ class MultiCollect(Collect):
             except Exception:
                 logger.exception("error occurred while gathering data for sourcetype %s" % sourcetype)
                 continue
+            else:
 
-            #TODO: put data in spool
-            #TODO: serialize data
-            #TODO: 'format' data
-            #TODO: batch data together
+                self.root.fire(Event(data=data,
+                                     extra=extra,
+                                     timestamp=timestamp,
+                                     sourcetype=sourcetype),
+                               'persist_data', target='persist')
 
-
-        #TODO: put stuff in spool
-        #XXX: use spool as queue
-
-        spool[key] = (sourcetype, timestamp, data, extra)
-        
-        self.persist_queue.put(key)
 
 

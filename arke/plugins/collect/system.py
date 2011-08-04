@@ -3,6 +3,8 @@ import logging
 from subprocess import Popen, PIPE
 from threading import Timer
 
+logger = logging.getLogger(__name__)
+
 import psutil
 from psutil._pslinux import wrap_exceptions
 

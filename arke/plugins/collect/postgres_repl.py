@@ -2,6 +2,8 @@
 import logging
 from time import sleep
 
+logger = logging.getLogger(__name__)
+
 import psycopg2
 
 from arke.collect import Collect
@@ -93,10 +95,10 @@ class postgres_repl(Collect):
 
         if result is None:
             if attempt > MAX_ATTEMPTS:
-                logging.error("Connection to postgres servers was interrupted more than %i times - going to bail.")
+                logger.error("Connection to postgres servers was interrupted more than %i times - going to bail.")
                 raise NoConnection
             else:
-                logging.error("Lost connection to postgres server %s while retrieving WAL location. Going to try again." % host)
+                logger.error("Lost connection to postgres server %s while retrieving WAL location. Going to try again." % host)
                 sleep(5)
                 return self.run(attempt+1)
 
@@ -104,8 +106,6 @@ class postgres_repl(Collect):
 
 
 if __name__ == '__main__':
-    #from giblets import ComponentManager
-    #cm = ComponentManager()
     from sys import argv
     try:
         user = argv[1]

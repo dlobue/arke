@@ -73,19 +73,19 @@ class Collect(Component):
     def gather_data(self):
         timestamp = time()
         sourcetype = self.name
-        extra = {}
+        extra = None
 
+        logger.debug("sourcetype: %r, timestamp: %r, extra: %r" % (sourcetype, timestamp, extra))
         try:
             data = self.collect()
-        except Exception, e:
+        except Exception:
             logger.exception("error occurred while gathering data for sourcetype %s" % sourcetype)
-            raise e
+            return
+
+        self.root.fire(Event(data=data,
+                             extra=extra,
+                             timestamp=timestamp,
+                             sourcetype=sourcetype),
+                       'persist_data', target='persist')
 
 
-        #TODO: put stuff in spool
-        #XXX: use spool as queue
-
-        #logger.debug("sourcetype: %r, timestamp: %r, extra: %r, data:\n%s" % (sourcetype, timestamp, pformat(extra), pformat(data)))
-        logger.debug("sourcetype: %r, timestamp: %r, extra: %r" % (sourcetype, timestamp, extra))
-        #spool[key] = (sourcetype, timestamp, data, extra)
-        

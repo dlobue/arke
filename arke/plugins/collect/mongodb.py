@@ -1,6 +1,8 @@
 
 import logging
 
+logger = logging.getLogger(__name__)
+
 import pymongo
 
 from arke.collect import Collect
@@ -25,7 +27,7 @@ class mongodb(Collect):
         try:
             repl_status = db.command('replSetGetStatus')
         except pymongo.errors.OperationFailure:
-            logging.debug("Mongodb server is not part of a replica set")
+            logger.debug("Mongodb server is not part of a replica set")
             repl_status = None
 
         try:
@@ -35,7 +37,7 @@ class mongodb(Collect):
                 col_stats=dict(self._coll_stats(connection))
             )
         except Exception:
-            logging.exception("Error while collecting mongodb server status")
+            logger.exception("Error while collecting mongodb server status")
 
     def _coll_stats(self, connection):
         for db_name in connection.database_names():
@@ -53,8 +55,6 @@ class mongodb(Collect):
 
 
 if __name__ == '__main__':
-    #from giblets import ComponentManager
-    #cm = ComponentManager()
     from sys import argv
     try:
         host = argv[1]

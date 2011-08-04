@@ -3,8 +3,6 @@ import logging
 from subprocess import Popen, PIPE
 from threading import Timer
 
-from circuits import Event
-
 import psutil
 from psutil._pslinux import wrap_exceptions
 
@@ -23,8 +21,6 @@ class ExProcess(psutil.Process):
 
 
 class system(collect_plugin):
-    #name = "system"
-    format = 'json'
     default_config = {'interval': 30,
                      }
 
@@ -186,11 +182,6 @@ class system(collect_plugin):
             
 if __name__ == '__main__':
     from pprint import pprint
-    #from giblets import ComponentManager
-    #cm = ComponentManager()
-    #from circuits import Debugger
-    #pprint((system() + Debugger()).run())
 
-    #pprint(system().collect())
-    pprint(system().channel)
+    pprint(system().collect())
 

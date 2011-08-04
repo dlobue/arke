@@ -5,9 +5,9 @@ import logging
 from gevent.socket import create_connection
 from paramiko.transport import Transport, SSHException
 
-from arke.plugins.collect._multi import _multi_collect_plugin
+from arke.plugins.collect._multi import MultiCollect
 
-class ssh_hello(_multi_collect_plugin):
+class ssh_hello(MultiCollect):
     default_config = {'interval': 10,
                       'port': 22,
                       'region': None,

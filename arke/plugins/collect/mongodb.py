@@ -3,9 +3,9 @@ import logging
 
 import pymongo
 
-from arke.plugin import collect_plugin
+from arke.collect import Collect
 
-class mongodb(collect_plugin):
+class mongodb(Collect):
     default_config = {'interval': 30,
                       'host': 'localhost',
                       'port': 27017,

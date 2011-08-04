@@ -9,7 +9,7 @@ from gevent.socket import create_connection
 from gevent.server import StreamServer
 from gevent import spawn
 
-from arke.plugins.collect._multi import _multi_collect_plugin
+from arke.plugins.collect._multi import MultiCollect
 
 class Ponger(TCPServer):
     def read(self, sock, data):
@@ -17,7 +17,7 @@ class Ponger(TCPServer):
         self.fire(Close(sock))
 
 
-class latency(_multi_collect_plugin):
+class latency(MultiCollect):
     hostname = None
     default_config = {'interval': 10,
                       'port': 64007,

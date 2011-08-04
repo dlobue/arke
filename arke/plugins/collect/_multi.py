@@ -8,10 +8,10 @@ logger = logging.getLogger(__name__)
 import boto
 from circuits import Event
 
-from arke.plugin import collect_plugin
+from arke.collect import Collect
 from arke.util import NormalizedTimer
 
-class _multi_collect_plugin(collect_plugin):
+class MultiCollect(Collect):
     default_config = {'interval': 10,
                       'region': None,
                      }

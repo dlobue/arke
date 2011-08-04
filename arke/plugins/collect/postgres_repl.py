@@ -4,13 +4,13 @@ from time import sleep
 
 import psycopg2
 
-from arke.plugin import collect_plugin
+from arke.collect import Collect
 
 MAX_ATTEMPTS = 5
 
 class NoConnection(Exception): pass
 
-class postgres_repl(collect_plugin):
+class postgres_repl(Collect):
     default_config = {'interval': 30,
                       'hosts': 'localhost',
                       'port': 5432,

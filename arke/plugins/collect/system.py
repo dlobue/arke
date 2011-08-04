@@ -6,7 +6,7 @@ from threading import Timer
 import psutil
 from psutil._pslinux import wrap_exceptions
 
-from arke.plugin import collect_plugin
+from arke.collect import Collect
 
 class ExProcess(psutil.Process):
     @property
@@ -20,7 +20,7 @@ class ExProcess(psutil.Process):
             return int(f.readline().strip())
 
 
-class system(collect_plugin):
+class system(Collect):
     default_config = {'interval': 30,
                      }
 

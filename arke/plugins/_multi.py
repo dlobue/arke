@@ -3,14 +3,28 @@ import logging
 from time import time
 from socket import error, timeout
 
+logger = logging.getLogger(__name__)
+
 import boto
+from circuits import Event
 
 from arke.plugin import collect_plugin
+from arke.util import NormalizedTimer
 
 class _multi_collect_plugin(collect_plugin):
     default_config = {'interval': 10,
                       'region': None,
                      }
+
+
+    def registered(self, component, manager):
+        if manager is not self and manager is self.manager \
+           and component is self and self._timer is None:
+            secs = self.get_setting('interval', opt_type=int)
+            self._timer = NormalizedTimer(secs, Event(), 'gather_data',
+                                          t=self.name, persist=True,
+                                          normalize=True).register(self)
+
 
     def collect(self, server, hostname):
         if 'ec2_public_hostname' in server:
@@ -23,9 +37,9 @@ class _multi_collect_plugin(collect_plugin):
             lag = self._collect(server, start, host)
         except error, e:
             if type(e) is timeout:
-                log = logging.warn
+                log = logger.warn
             else:
-                log = logging.error
+                log = logger.error
             log('socket %s: errno=%r, error msg=%s for server %s' % (e.__class__.__name__, e.errno, e.strerror, server['fqdn']))
             lag = -1
 
@@ -33,14 +47,6 @@ class _multi_collect_plugin(collect_plugin):
                 'to': server['fqdn'],
                 'lag': lag
                }
-
-    def format_data(self, data):
-        if hasattr(data, '__iter__') and not hasattr(data, 'setdefault'):
-            data = { '$each': data }
-        d = {'$addToSet':
-             {'data': data }
-            }
-        return d
 
     def iter_servers(self):
         if not hasattr(self, 'sdb_domain'):
@@ -53,7 +59,7 @@ class _multi_collect_plugin(collect_plugin):
         region = self.get_setting('region')
         if region:
             query += " and ec2_region = '%s'" % region
-        logging.debug('looking for peers with the query: %s' % query)
+        logger.debug('looking for peers with the query: %s' % query)
         servers = self.sdb_domain.select(query)
         for server in servers:
             yield server
@@ -61,26 +67,22 @@ class _multi_collect_plugin(collect_plugin):
     def gather_data(self):
         timestamp = time()
         sourcetype = self.name
-        #key needs to be generated before we normalize
-        key = '%f%s' % (timestamp, sourcetype)
-        extra = {}
+        extra = {'timestamp_as_id': True,
+                 'custom_schema': True,
+                }
 
-        offset = timestamp % self.get_setting('interval')
-        timestamp = timestamp - offset
-        extra['timestamp_as_id'] = True
+        #normalize timestamp so we can sync up with other servers
+        timestamp = timestamp - (timestamp % self.get_setting('interval'))
 
-        extra['custom_schema'] = True
-
-        hostname = self.config.get('core', 'hostname')
+        hostname = self.root.call(Event('core', 'hostname'), 'get', target='config')
 
         for server in self.iter_servers():
             if server['fqdn'] == hostname:
                 continue
             try:
                 data = self.collect(server, hostname)
-                data = self.serialize(self.collect())
             except Exception:
-                logging.exception("error occurred while gathering data for sourcetype %s" % sourcetype)
+                logger.exception("error occurred while gathering data for sourcetype %s" % sourcetype)
                 continue
 
             #TODO: put data in spool

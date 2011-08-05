@@ -4,20 +4,63 @@ from time import time
 import logging
 import shelve
 import signal
+import optparse
 
-import simpledaemon
 from gevent import monkey, spawn, sleep
 from gevent.pool import Pool
-#from eventlet import Queue, GreenPool, sleep, spawn
 
 monkey.patch_all(httplib=True)
 
-import config
+from circuits import Component, Event
+from circuits.core.handlers import HandlerMetaClass
+from circuits.app.config import Config as _Config
+
+from circuits import Debugger
+
+Config = HandlerMetaClass('Config', (_Config,), _Config.__dict__.copy())
+
 import persist
-from plugin import get_plugin_manager
+from arke.collect import Collect
+from arke.plugin import CollectPlugins
 
 
 RETRY_INTERVAL_CAP = 300
+DEFAULT_CONFIG_FILE = '/etc/arke/arke.conf'
+
+
+def argparser():
+    p = optparse.OptionParser()
+    p.add_option('-c', dest='config_filename',
+                 action='store', default=DEFAULT_CONFIG_FILE,
+                 help='Specify alternate configuration file name')
+    p.add_option('-d', '--daemonize', dest='daemonize',
+                 action='store_true', default=False,
+                 help='Run in the foreground')
+    options, args = p.parse_args()
+
+
+class Agent(Component):
+    section = 'agent'
+    def __init__(self, config_file=DEFAULT_CONFIG_FILE):
+        super(Agent, self).__init__()
+
+        self.config = Config(config_file).register(self)
+        self.config.load()
+
+        self.collect_manager = CollectPlugins(base_class=Collect,
+                                             entry_points='arke_plugins',
+                                            )
+
+
+    def started(self, *args):
+        self.collect_manager.load()
+        self.collect_manager.enabler()
+
+
+if __name__ == '__main__':
+    (Agent(DEFAULT_CONFIG_FILE) + Debugger()).run()
+
+
 
 
 class NoPlugins(Exception): pass
@@ -196,6 +239,6 @@ class agent_daemon(simpledaemon.Daemon):
         spool.pop(key)
 
 
-if __name__ == '__main__':
-    agent_daemon().main()
+#if __name__ == '__main__':
+    #agent_daemon().main()
 

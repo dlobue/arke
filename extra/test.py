@@ -15,7 +15,8 @@ from circuits.core.handlers import HandlerMetaClass, handler
 from circuits import Manager, Debugger
 from circuits.app.config import Config as _Config, Load
 
-from arke.plugin import plugin_manager, collect_plugin
+from arke.plugin import PluginManager
+from arke.collect import Collect
 
 #class Config(_Config):
     #@handler('getboolean')

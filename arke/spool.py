@@ -18,11 +18,6 @@ class Spooler(Component):
         self._db = None
 
 
-    def serialize(self, data):
-        return dumps(data)
-    def deserialize(self, data):
-        return loads(data)
-
     @handler('started')
     def open(self, spool_file=None):
         if self._db is not None or self._dbenv is not None:
@@ -48,7 +43,11 @@ class Spooler(Component):
         e.open(spool_dir, db.DB_PRIVATE | db.DB_CREATE | db.DB_THREAD | db.DB_INIT_LOCK | db.DB_INIT_MPOOL | db.DB_INIT_TXN)
 
         d = db.DB(e)
-        d.open(file, db.DB_RECNO, db.DB_CREATE, 0600)
+        d.set_q_extentsize(4096)
+        d.set_pagesize(4096)
+        #d.set_re_len(4064)
+
+        d.open(file, db.DB_RECNO, db.DB_CREATE | db.DB_AUTO_COMMIT, 0600)
 
         self._dbenv = e
         self._db = d
@@ -59,7 +58,7 @@ class Spooler(Component):
         if self._txn_registry:
             logger.error("Told to close when there are still open transactions!")
             #XXX now what?
-            raise RuntimeError
+            raise SystemExit
 
         self._db.close()
         self._dbenv.close()
@@ -70,23 +69,38 @@ class Spooler(Component):
 
     @handler('persist_data', target='persist', override=True)
     def append(self, sourcetype, timestamp, data, extra=None):
-        txn = self._dbenv.txn_begin()
-        s = self.manager.serialize((sourcetype, timestamp, data, extra))
-        rid = self._db.append(s, txn=txn)
-        txn.commit()
+        s = dumps((sourcetype, timestamp, data, extra))
+        rid = self._db.append(s)
 
-        self.fire(Event(), 'persist', target='persist')
+        self.fire(Event(rid=(rid, (sourcetype, timestamp, data, extra))), 'persist', target='persist')
         return rid
 
-    
-    def get(self, record_id):
-        self._db.get(record_id)
+    @handler('remove')
+    def delete(self, rid):
+        return self._db.delete(rid)
 
-    def consume(self):
+    def get(self, rid):
+        data = self._db.get(rid)
+        return loads(data)
+
+
+
+    #@handler('persist_data', target='persist', override=True)
+    #def append(self, sourcetype, timestamp, data, extra=None):
+        #txn = self._dbenv.txn_begin()
+        #s = self.serialize((sourcetype, timestamp, data, extra))
+        #rid = self._db.append(s, txn=txn)
+        #txn.commit()
+
+        #self.fire(Event(rid=(rid, (sourcetype, timestamp, data, extra))), 'persist', target='persist')
+        #return rid
+
+    def pop(self, rid):
         txn = self._dbenv.txn_begin()
-        rid, data = self._db.consume(txn=txn)
+        data = self._db.get(rid, txn=txn)
+        self._db.delete(rid, txn=txn)
         self._txn_registry[rid] = txn
-
+        return loads(data)
 
     def commit(self, rid):
         if rid not in self._txn_registry:

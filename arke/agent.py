@@ -9,7 +9,7 @@ import optparse
 from gevent import monkey, spawn, sleep
 from gevent.pool import Pool
 
-monkey.patch_all(httplib=True)
+#monkey.patch_all(httplib=True)
 
 from circuits import Component, Event
 from circuits.core.handlers import HandlerMetaClass
@@ -19,9 +19,9 @@ from circuits import Debugger
 
 Config = HandlerMetaClass('Config', (_Config,), _Config.__dict__.copy())
 
-import persist
 from arke.collect import Collect
 from arke.plugin import CollectPlugins
+from arke.persist import Persist
 
 
 RETRY_INTERVAL_CAP = 300
@@ -49,23 +49,33 @@ class Agent(Component):
 
         self.collect_manager = CollectPlugins(base_class=Collect,
                                              entry_points='arke_plugins',
-                                            )
+                                            ).register(self)
+        self.persist_manager = Persist(1).register(self)
 
 
     def started(self, *args):
         self.collect_manager.load()
-        self.collect_manager.enabler()
 
 
 if __name__ == '__main__':
-    (Agent(DEFAULT_CONFIG_FILE) + Debugger()).run()
+    mylogger = logging.getLogger()
+    mylogger.setLevel(logging.DEBUG)
+    h = logging.StreamHandler()
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    h.setFormatter(formatter)
+    mylogger.addHandler(h)
+
+    import sys
+
+    (Agent(sys.argv[1]) + Debugger()).run()
 
 
 
 
 class NoPlugins(Exception): pass
 
-class agent_daemon(simpledaemon.Daemon):
+Daemon = object
+class agent_daemon(Daemon):
     default_conf = '/etc/arke/arke.conf'
     section = 'agent'
 

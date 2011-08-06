@@ -120,7 +120,9 @@ class PluginManager(Component):
 
 class CollectPlugins(PluginManager):
 
-    def enabler(self, **kwargs):
+    def load(self, **kwargs):
+        super(CollectPlugins, self).load(**kwargs)
+
         for plugin in self._plugins.copy():
             val = self.manager.call(Event(plugin.section, 'enabled'), 'getboolean', target='config')
             if val.value:
@@ -133,7 +135,9 @@ class CollectPlugins(PluginManager):
 
 class PersistPlugins(PluginManager):
 
-    def enabler(self, **kwargs):
+    def load(self, **kwargs):
+        super(CollectPlugins, self).load(**kwargs)
+
         if 'backend' in kwargs:
             backend = kwargs['backend']
         else:

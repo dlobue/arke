@@ -20,15 +20,13 @@ setup(name='arke',
       data_files=[('/etc/init', ['init_scripts/arke.conf']),
                  ],
       install_requires=[
-          "timer2>0.1.0",
-          "giblets>=0.2.1",
-          "simpledaemon>=1.0.1",
           "pymongo>=1.10",
           "gevent>=0.13.6",
           "psutil>=0.2.1",
           "paramiko",
           "boto>=2.0rc1",
           "psycopg2>=2.4.2",
+          "circuits>=1.6",
       ],
       entry_points="""
       # -*- Entry points: -*-

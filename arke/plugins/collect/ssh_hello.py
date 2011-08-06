@@ -4,7 +4,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from gevent.socket import create_connection
+from socket import create_connection
 from paramiko.transport import Transport, SSHException
 
 from arke.plugins.collect._multi import MultiCollect

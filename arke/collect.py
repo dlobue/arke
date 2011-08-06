@@ -24,8 +24,9 @@ class Collect(Component):
                          }[opt_type]
             except KeyError:
                 getter = 'get'
-            v = self.root.call(Event(self.section, setting, default=fallback), getter, target='config')
-            val = v.value
+            #v = self.root.call(Event(self.section, setting, default=fallback), getter, target='config')
+            val = getattr(self.root.config, getter)(self.section, setting, default=fallback)
+            #val = v.value
             logger.debug("setting value from config component is %r" % val)
 
         if val is None:

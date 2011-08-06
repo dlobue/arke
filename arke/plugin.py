@@ -103,7 +103,7 @@ class PluginManager(Component):
                    )
 
         self.load_entry_points()
-        self.load_paths()
+        self.load_plugin_dirs()
 
         logger.debug("in plugin_manager load. modules found: %r" % self._modules)
 

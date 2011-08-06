@@ -33,15 +33,16 @@ def request_factory(hostname, sourcetype, timestamp, data, extra):
 
 
 class Persist(Component):
+    channel = 'persist'
 
     def __init__(self, pool_count=10):
         super(Persist, self).__init__()
         self._pool_count = pool_count
         self.queue = Queue()
-        self.hostname = self.root.config.get('core', 'hostname')
+        self.spool = Spooler().register(self)
 
     def started(self, *args, **kwargs):
-        self.spool = Spooler().register(self)
+        self.hostname = self.root.config.get('core', 'hostname')
         b = self.root.config.get('core', 'persist_backend')
         b = b.lower()
         h = self.root.config.get('backend:%s' % b, 'host')

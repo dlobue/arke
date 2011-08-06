@@ -5,25 +5,28 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-import bsddb
+import bsddb3 as bsddb
 db = bsddb.db
 from circuits import Component, Event, handler
 
 class Spooler(Component):
-    def __init__(self):
+    channel = 'spooler'
+    def __init__(self, spool_file=None):
         super(Spooler, self).__init__()
 
         self._txn_registry = {}
         self._dbenv = None
         self._db = None
+        self._spool_file = spool_file
 
 
     @handler('started')
-    def open(self, spool_file=None):
+    def open(self, *args, **kwargs):
         if self._db is not None or self._dbenv is not None:
             logger.warn("Told to open an already-open spool again!")
             return
 
+        spool_file = self._spool_file
         if spool_file is None:
             spool_file = self.root.call(Event('core', 'spool_file'), 'get', target='config').value
             assert spool_file is not None, "no spool dir was given!"
@@ -47,14 +50,14 @@ class Spooler(Component):
         d.set_pagesize(4096)
         #d.set_re_len(4064)
 
-        d.open(file, db.DB_RECNO, db.DB_CREATE | db.DB_AUTO_COMMIT, 0600)
+        d.open(spool_file, db.DB_RECNO, db.DB_CREATE | db.DB_AUTO_COMMIT, 0600)
 
         self._dbenv = e
         self._db = d
 
 
     @handler('stopped')
-    def close(self):
+    def close(self, *args, **kwargs):
         if self._txn_registry:
             logger.error("Told to close when there are still open transactions!")
             #XXX now what?

@@ -2,9 +2,10 @@
 from time import time
 
 from circuits.core import BaseComponent
+from circuits.core.timers import Timer
 
 
-class NormalizedTimer(BaseComponent):
+class NormalizedTimer(Timer):
     def __init__(self, s, e, c="timer", t=None, persist=False, normalize=False):
         self.normalize = normalize
         super(NormalizedTimer, self).__init__(s=s, e=e, c=c, t=t, persist=persist)

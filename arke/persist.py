@@ -22,12 +22,15 @@ class Retry(Event): pass
 def request_factory(hostname, sourcetype, timestamp, data, extra):
     path = '/store/%s/%s/%f' % (hostname, sourcetype, timestamp)
 
-    headers = {'Content-type': 'application/bson'}
+    headers = {'Content-type': 'application/jsonext'}
+    #headers = {'Content-type': 'application/bson'}
     if extra and isinstance(extra, dict):
         headers['extra'] = json.dumps(extra, default=json_util.default)
 
     method = 'PUT'
-    body = BSON.encode(data)
+    body = json.dumps(data, default=json_util.default)
+    #body = BSON.encode(data)
+    headers['Content-Length'] = len(body)
 
     return Request(method, path, body, headers)
 

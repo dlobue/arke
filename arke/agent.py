@@ -53,6 +53,12 @@ class Agent(Component):
         self.persist_manager = Persist(1).register(self)
 
 
+    def exception(self, *args, **kwargs):
+        from pprint import pprint
+        pprint(args)
+        pprint(kwargs)
+        raise SystemExit
+
     def started(self, *args):
         self.collect_manager.load()
 

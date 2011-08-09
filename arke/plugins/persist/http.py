@@ -3,10 +3,9 @@ import httplib
 import logging
 import json
 
-from bson import json_util
+logger = logging.getLogger(__name__)
 
-#import eventlet
-#httplib = eventlet.import_patched('httplib')
+from bson import json_util
 
 from .base import ipersist
 
@@ -43,12 +42,5 @@ class http_backend(ipersist):
         conn.request('PUT', uri, body=data, headers=headers)
         resp = conn.getresponse()
 
-        if resp.status == 200:
-            return True
-        else:
-            if self.debug:
-                logging.critical("Debug is enabled, and didn't get 200 from remote server. raising to prevent loop.")
-                assert resp.status == 200
-            logging.warning("Didn't get 200 from remote server!")
-            return False
+        assert resp.status in (200,204), "Didn't get 200 from remote server!"
 

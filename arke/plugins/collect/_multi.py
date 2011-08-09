@@ -72,9 +72,10 @@ class MultiCollect(Collect):
                 }
 
         #normalize timestamp so we can sync up with other servers
-        timestamp = timestamp - (timestamp % self.get_setting('interval'))
+        timestamp = timestamp - (timestamp % self.get_setting('interval', opt_type=int))
 
-        hostname = self.root.call(Event('core', 'hostname'), 'get', target='config')
+        #hostname = self.root.call(Event('core', 'hostname'), 'get', target='config')
+        hostname = self.root.config.get('core', 'hostname')
         logger.debug("sourcetype: %r, timestamp: %r, extra: %r" % (sourcetype, timestamp, extra))
 
         for server in self.iter_servers():

@@ -27,10 +27,10 @@ class Collect(Component):
             #v = self.root.call(Event(self.section, setting, default=fallback), getter, target='config')
             val = getattr(self.root.config, getter)(self.section, setting, default=fallback)
             #val = v.value
-            logger.debug("setting value from config component is %r" % val)
+            #logger.debug("setting value from config component is %r" % val)
 
         if val is None:
-            logger.debug("setting value is None. using defaults.")
+            #logger.debug("setting value is None. using defaults.")
             val = self.default_config.get(setting, fallback)
             if not (opt_type in (None, bool) or isinstance(val, opt_type)):
                 try:

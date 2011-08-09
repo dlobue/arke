@@ -62,7 +62,7 @@ class Collect(Component):
         if manager is not self and manager is self.manager \
            and component is self and self._timer is None:
             secs = self.get_setting('interval', opt_type=int)
-            self._timer = Timer(secs, Event(), 'gather_data', t=self.name, persist=True).register(self)
+            self._timer = Timer(secs, Event(), 'gather_data', t=self, persist=True).register(self)
 
     def unregistered(self, component, manager):
         if manager is not self and manager is self.manager \

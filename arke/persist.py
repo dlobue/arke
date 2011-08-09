@@ -66,13 +66,13 @@ class Persist(Component):
     def _on_response(self, bid):
         rid = self._backend_state[bid]
         self.fire(Event(rid), 'remove', target=self.spool)
-        self.spool.commit(rid)
         self._backend_state[bid] = IDLE
         self.fire(Event(bid), 'persist', target=self)
 
 
     def persist(self, bid=None, rid=None):
         if rid is None and self.queue.empty():
+            logger.debug("Nothing to persist, exiting persist.persist")
             #nothing to persist.
             return
         if bid is None:
@@ -81,6 +81,7 @@ class Persist(Component):
                 if rid is not None:
                     self.queue.put(rid[0])
                 #sleep and try again?
+                logger.debug("No available backends, exiting persist.persist")
                 return
             bid = available_backends[0]
 
@@ -126,7 +127,7 @@ class RetryHTTPClient(HTTPClient):
     @handler('response', priority=-1)
     def on_response(self, response):
         if response.status in (200,204):
-            return self.fire(Event(self.channel), 'response_success')
+            return self.fire(Event(self.channel), 'response_success', target=self.manager)
 
         secs = self._attempt * 2
         self._attempt += 1

@@ -3,6 +3,7 @@ from Queue import Queue
 from uuid import uuid4
 import logging
 import json
+import httplib
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +94,7 @@ class Persist(Component):
             rid = rid[0]
 
         self._backend_state[bid] = rid
+        #self.fire(Event(), 'connect', target=bid)
         self.fire(request_factory(
             self.hostname, sourcetype, timestamp, data, extra),
             'request', target=bid
@@ -107,7 +109,25 @@ class HTTPClient(Client):
             channel = self.channel
         super(HTTPClient, self).__init__(url, channel=channel)
 
-class RetryHTTPClient(HTTPClient):
+class HTTPLibClient(Component):
+    def __init__(self, host, port, secure=False, channel=None):
+        super(HTTPLibClient, self).__init__(channel=channel)
+        self._host = host
+        self._port = port
+        self._client = {True: httplib.HTTPSConnection,
+                        'https': httplib.HTTPSConnection,
+                        False: httplib.HTTPConnection,
+                        'http': httplib.HTTPConnection,
+                       }[secure](host, int(port))
+
+    def request(self, method, path, body=None, headers=None):
+        conn = self._client
+        conn.request('PUT', path, body=body, headers=headers)
+        self.fire(Event(conn.getresponse()), 'response')
+
+
+
+class RetryHTTPClient(HTTPLibClient):
     def __init__(self, host, port, scheme, channel= None):
         super(RetryHTTPClient, self).__init__(host, port, scheme, channel=channel)
         self._prev_request = None
@@ -116,11 +136,22 @@ class RetryHTTPClient(HTTPClient):
     def on_request(self, *args, **kwargs):
         self._prev_request = (args, kwargs)
         self._attempt = 0
-        self.connect()
+        #self.connect()
+
+    #@handler('request')
+    #def request(self, method, path, body=None, headers=None):
+        #if headers is None:
+            #headers = {}
+
+        #if 'Host' not in headers:
+            #headers['Host'] = '%s:%s' % (self._host, str(self._port))
+
+        #return super(RetryHTTPClient, self).request(method, path, body, headers)
+
 
     @handler('retry')
     def retry(self):
-        self.connect()
+        #self.connect()
         args, kwargs = self._prev_request
         self.request(*args, **kwargs)
 

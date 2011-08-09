@@ -6,24 +6,15 @@ from socket import error, timeout
 logger = logging.getLogger(__name__)
 
 import boto
-from circuits import Event
 
 from arke.collect import Collect
-from arke.util import NormalizedTimer
 
 class MultiCollect(Collect):
+    normalize = True
+    format = 'extjson'
     default_config = {'interval': 10,
                       'region': None,
                      }
-
-
-    def registered(self, component, manager):
-        if manager is not self and manager is self.manager \
-           and component is self and self._timer is None:
-            secs = self.get_setting('interval', opt_type=int)
-            self._timer = NormalizedTimer(secs, Event(), 'gather_data',
-                                          t=self.name, persist=True,
-                                          normalize=True).register(self)
 
 
     def collect(self, server, hostname):
@@ -69,30 +60,27 @@ class MultiCollect(Collect):
         sourcetype = self.name
         extra = {'timestamp_as_id': True,
                  'custom_schema': True,
+                 'ctype': self.format,
                 }
 
         #normalize timestamp so we can sync up with other servers
         timestamp = timestamp - (timestamp % self.get_setting('interval', opt_type=int))
 
-        #hostname = self.root.call(Event('core', 'hostname'), 'get', target='config')
-        hostname = self.root.config.get('core', 'hostname')
+        hostname = self.config.get('core', 'hostname')
         logger.debug("sourcetype: %r, timestamp: %r, extra: %r" % (sourcetype, timestamp, extra))
 
-        for server in self.iter_servers():
+        def _gather(server):
             if server['fqdn'] == hostname:
-                continue
+                return
             try:
-                data = self.collect(server, hostname)
+                data = self.serialize(self.collect(server, hostname))
             except Exception:
                 logger.exception("error occurred while gathering data for sourcetype %s" % sourcetype)
-                continue
-            else:
+                return
+            key = self.spool.append((sourcetype, timestamp, data, extra))
+            self.persist_queue.put(key)
 
-                self.root.fire(Event(data=data,
-                                     extra=extra,
-                                     timestamp=timestamp,
-                                     sourcetype=sourcetype),
-                               'persist_data', target='persist')
-
-
+        pool = self._pool
+        for server in self.iter_servers():
+            pool.spawn(_gather, server)
 

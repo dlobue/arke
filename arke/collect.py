@@ -2,11 +2,16 @@
 from time import time
 import logging
 logger = logging.getLogger(__name__)
+import json
 
-from circuits import Component, Event, Timer
+from bson import json_util, BSON
 
-class Collect(Component):
+from gevent.core import timer
+
+class Collect(object):
     default_config = {'interval': 30}
+    normalize = False
+    format = 'extjson'
 
     def __new__(cls, *args, **kwargs):
         if not hasattr(cls, '_instance'):
@@ -16,7 +21,7 @@ class Collect(Component):
 
     def get_setting(self, setting, fallback=None, opt_type=None):
         val = None
-        if self.manager is not self or 'config' in self.components:
+        if self.config is not None:
             try:
                 getter = {int: 'getint',
                           float: 'getfloat',
@@ -24,10 +29,7 @@ class Collect(Component):
                          }[opt_type]
             except KeyError:
                 getter = 'get'
-            #v = self.root.call(Event(self.section, setting, default=fallback), getter, target='config')
-            val = getattr(self.root.config, getter)(self.section, setting, default=fallback)
-            #val = v.value
-            #logger.debug("setting value from config component is %r" % val)
+            val = getattr(self.config, getter)(self.section, setting, default=fallback)
 
         if val is None:
             #logger.debug("setting value is None. using defaults.")
@@ -40,11 +42,15 @@ class Collect(Component):
 
         return val
 
-    def __init__(self):
-        super(Collect, self).__init__()
-        self.channel = self.name
+    def __init__(self, config, persist_queue, spool, pool):
+        self._pool = pool
+        self.spool = spool
+        self.config = config
+        self.persist_queue = persist_queue
+        self.name = self.__class__.__name__
         self.section = 'plugin:%s' % self.name
         self._timer = None
+        self.is_active = False
         assert 'interval' in self.default_config, (
             "Missing default interval value for %s plugin" % self.name)
 
@@ -52,41 +58,56 @@ class Collect(Component):
     def enabled(self):
         return self.get_setting('enabled', False, opt_type=bool)
 
-    @property
-    def is_registered(self):
-        if self.manager is not self and self in self.manager:
-            return True
-        return False
+    def activate(self):
+        self.is_active = True
+        self.run()
 
-    def registered(self, component, manager):
-        if manager is not self and manager is self.manager \
-           and component is self and self._timer is None:
-            secs = self.get_setting('interval', opt_type=int)
-            self._timer = Timer(secs, Event(), 'gather_data', t=self, persist=True).register(self)
+    def deactivate(self):
+        self.is_active = False
+        self._timer.cancel()
+        self._timer = None
 
-    def unregistered(self, component, manager):
-        if manager is not self and manager is self.manager \
-           and component is self and self._timer is not None:
-                self._timer.unregister()
-                self._timer = None
+    def _reset_timer(self):
+        assert self._timer is None, "Trying to reset active timer!"
+
+        t = time()
+        s = self.get_setting('interval', opt_type=int)
+        if self.normalize:
+            s = (s - (t % s))
+
+        self._timer = timer(s, self.run)
+
+    def run(self):
+        self._timer = None
+        self._reset_timer()
+        self._pool.spawn(self.gather_data)
 
 
     def gather_data(self):
         timestamp = time()
         sourcetype = self.name
-        extra = None
+        extra = {
+            'ctype': self.format,
+        }
 
         logger.debug("sourcetype: %r, timestamp: %r, extra: %r" % (sourcetype, timestamp, extra))
         try:
-            data = self.collect()
+            data = self.serialize(self.collect())
         except Exception:
             logger.exception("error occurred while gathering data for sourcetype %s" % sourcetype)
             return
 
-        self.root.fire(Event(data=data,
-                             extra=extra,
-                             timestamp=timestamp,
-                             sourcetype=sourcetype),
-                       'persist_data', target='persist')
+        key = self.spool.append((sourcetype, timestamp, data, extra))
+        self.persist_queue.put(key)
 
+    def serialize(self, data):
+        if not self.format:
+            return data
+
+        if self.format.lower() == "json":
+            return json.dumps(data)
+        elif self.format.lower() == "bson":
+            return BSON.encode(data)
+        elif self.format.lower() == "extjson":
+            return json.dumps(data, default=json_util.default)
 

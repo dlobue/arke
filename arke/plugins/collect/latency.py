@@ -4,20 +4,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from circuits import handler
-from circuits.net.sockets import TCPServer, Write, Close
-
 from gevent.socket import create_connection
 from gevent.server import StreamServer
 from gevent import spawn
 
 from arke.plugins.collect._multi import MultiCollect
-
-class Ponger(TCPServer):
-    def read(self, sock, data):
-        self.fire(Write(sock, 'PONG'))
-        self.fire(Close(sock))
-
 
 class latency(MultiCollect):
     default_config = {'interval': 10,
@@ -27,33 +18,24 @@ class latency(MultiCollect):
                       'region': None,
                      }
 
-    @handler("registered")
-    def _start_server(self, component, manager):
-        if manager is not self and manager is self.manager \
-           and component is self and not hasattr(self, '_server') \
-           or self._server is None:
-            self._server = Ponger(
-                self.get_setting('port', opt_type=int),
-                backlog=self.get_setting('server_backlog', opt_type=int)
-            ).register(self)
+    def activate(self):
+        super(latency, self).activate()
+        self._start_server()
 
-    @handler("unregister")
-    def _stop_server(self, component, manager):
-        if manager is not self and manager is self.manager \
-           and component is self and hasattr(self, '_server') \
-           and self._server is not None:
-            self._server.stop()
+    def deactivate(self):
+        super(latency, self).deactivate()
+        self._server.kill()
 
-    #def _start_server(self):
-        #def handler(sock, client_addr):
-            #logger.debug("Got connection from: %s" % ':'.join(map(str, client_addr)))
-            #sock.recv(5)
-            #sock.sendall('PONG\n')
-        #self._server = StreamServer(
-                         #('0.0.0.0', self.get_setting('port', opt_type=int)),
-                         #handle=handler,
-                         #backlog=self.get_setting('server_backlog', opt_type=int))
-        #spawn(self._server.serve_forever)
+    def _start_server(self):
+        def handler(sock, client_addr):
+            logger.debug("Got connection from: %s" % ':'.join(map(str, client_addr)))
+            sock.recv(5)
+            sock.sendall('PONG\n')
+        self._server = StreamServer(
+                         ('0.0.0.0', self.get_setting('port', opt_type=int)),
+                         handle=handler,
+                         backlog=self.get_setting('server_backlog', opt_type=int))
+        spawn(self._server.serve_forever)
 
 
     def _collect(self, server, start, host):

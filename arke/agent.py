@@ -29,10 +29,8 @@ class agent_daemon(Daemon):
     def read_basic_config(self):
         super(agent_daemon, self).read_basic_config()
         self.hostname = self.config_parser.get('core', 'hostname')
-        config.set_main_object(self)
 
     def __init__(self):
-        self.run_queue = Queue()
         self.persist_queue = Queue()
         self.spool = None
         self.stop_now = False
@@ -45,6 +43,7 @@ class agent_daemon(Daemon):
     def on_sigterm(self, signalnum, frame):
         logging.info("got sigterm")
         self.stop_now = True
+        self._gather_pool.kill()
 
     def add_signal_handlers(self):
         super(self.__class__, self).add_signal_handlers()
@@ -53,15 +52,24 @@ class agent_daemon(Daemon):
 
     def run(self):
         logging.debug("initializing spool")
-        self.spool = shelve.open(
-            self.config_parser.get('core', 'spool_file'))
+        self.spool = spool = Spooler(self.config_parser).open()
+        self._gather_pool = pool = Pool(1000)
 
-        self.load_plugins()
-        gather_runner = spawn(self.gather_runner)
+        config = self.config_parser
+        persist_queue = self.persist_queue
+
+        self.collect_manager = CollectPlugins(base_class=Collect,
+                                              config=config,
+                                              init_args=(config, persist_queue, spool, pool),
+                                             entry_points='arke_plugins',
+                                            )
+
+
+        self.collect_manager.load()
         persist_runner = spawn(self.persist_runner)
 
         while 1:
-            if self.stop_now and gather_runner.dead and persist_runner.dead:
+            if self.stop_now and persist_runner.dead:
                 break
             sleep(5)
 
@@ -69,62 +77,15 @@ class agent_daemon(Daemon):
 
 
 
-    def load_plugins(self):
-        plugin_dirs = self.config_parser.get('core', 'plugin_dirs')
-        plugin_dirs = plugin_dirs.replace(',', ' ')
-        plugin_dirs = plugin_dirs.split()
-
-        logging.debug("initializing plugin subsystem")
-        self.plugin_manager = get_plugin_manager(plugin_dirs)
-
-        no_plugins_activated = True
-        for plugin in self.plugin_manager.collection_plugins:
-            if not plugin.enabled:
-                if plugin.is_activated:
-                    logging.info(("active plugin %s is no longer enabled "
-                                  "- deactivating.") % plugin.name)
-                    plugin.deactivate()
-                else:
-                    logging.debug(("discovered plugin %s is not enabled. "
-                               "skipping activation") % plugin.name)
-                continue
-
-            logging.info("activating plugin %s" % plugin.name)
-            if not plugin.is_activated:
-                plugin.activate()
-            no_plugins_activated = False
-
-
-        if no_plugins_activated:
-            raise NoPlugins("No plugins found or enabled.")
-
-
-
-    def gather_runner(self):
-        pool = Pool(1000)
-
-        while 1:
-            if self.stop_now:
-                break
-            try:
-                plugin = self.run_queue.get(True, 5)
-            except Empty:
-                sleep(1)
-                continue
-
-            pool.spawn(self.gather_data, plugin, self.spool)
-
-
     def persist_runner(self):
         logging.debug("initializing backend %s" % self.config_parser.get('core', 'persist_backend'))
         persist_backend = getattr(persist, '%s_backend' %
                 self.config_parser.get('core', 'persist_backend'))
-        persist_backend = persist_backend(config.get_config())
 
-        if self.spool:
-            logging.info("found data already in spool. adding to queue")
-            for key in self.spool:
-                self.persist_queue.put(key)
+        persist_backend = persist_backend(self.config_parser)
+
+        for key in self.spool.keys():
+            self.persist_queue.put(key)
 
         pool = Pool(100)
 
@@ -138,40 +99,6 @@ class agent_daemon(Daemon):
                 continue
 
             pool.spawn(self.persist_data, item, self.spool, persist_backend)
-
-
-    def gather_data(self, plugin, spool):
-        timestamp = time()
-        sourcetype = plugin.name
-        #key needs to be generated before we normalize
-        key = '%f%s' % (timestamp, sourcetype)
-        extra = {}
-
-        if plugin.timestamp_as_id:
-            #if the timestamp is going to be used as the id, then
-            #that means we're going to group multiple results into
-            #the same document. round the timestamp in order to ensure
-            #we catch everything.
-            offset = timestamp % plugin.get_setting('interval')
-            timestamp = timestamp - offset
-            extra['timestamp_as_id'] = True
-
-        if plugin.custom_schema:
-            extra['custom_schema'] = True
-
-        if plugin.format:
-            extra['ctype'] = plugin.format.lower()
-
-        logging.debug("gathering data for %s sourcetype" % sourcetype)
-        try:
-            data = plugin()
-        except Exception, e:
-            logging.exception("error occurred while gathering data for sourcetype %s" % sourcetype)
-            raise e
-
-        spool[key] = (sourcetype, timestamp, data, extra)
-        
-        self.persist_queue.put(key)
 
 
     def persist_data(self, key, spool, persist_backend):
@@ -193,7 +120,7 @@ class agent_daemon(Daemon):
                 retry = attempt * 2
             attempt += 1
 
-        spool.pop(key)
+        spool.delete(key)
 
 
 #if __name__ == '__main__':

@@ -16,21 +16,18 @@ except ImportError:
     working_set = None
     ENTRY_POINTS = False
 
-from circuits import Component, Event
+class NoPlugins(Exception): pass
 
-
-class PluginManager(Component):
-    channel = "plugin_manager"
+class PluginManager(object):
 
     def __init__(self,
                  base_class,
+                 config,
                  entry_points=None,
                  init_args=None,
-                 init_kwargs=None,
-                 channel=channel):
+                 init_kwargs=None):
 
-        super(PluginManager, self).__init__(channel=channel)
-
+        self.config = config
         self._init_args = init_args or tuple()
         self._init_kwargs = init_kwargs or dict()
         self._base_class = base_class
@@ -62,7 +59,7 @@ class PluginManager(Component):
 
     def load_plugin_dirs(self, plugin_dirs=None):
         if plugin_dirs is None:
-            plugin_dirs = self.root.call(Event('core', 'plugin_dirs'), 'get', target='config').value
+            plugin_dirs = self.config.get('core', 'plugin_dirs', None)
             if plugin_dirs is None:
                 logger.warn('No plugin dirs given. skipping directory search.')
                 return
@@ -123,14 +120,25 @@ class CollectPlugins(PluginManager):
     def load(self, **kwargs):
         super(CollectPlugins, self).load(**kwargs)
 
+        no_plugins_activated = True
         for plugin in self._plugins.copy():
-            val = self.manager.call(Event(plugin.section, 'enabled'), 'getboolean', target='config')
-            if val.value:
-                if plugin not in self:
-                    plugin.register(self)
+            if not plugin.enabled:
+                if plugin.is_activated:
+                    logger.info(("active plugin %s is no longer enabled "
+                                  "- deactivating.") % plugin.name)
+                    plugin.deactivate()
+                else:
+                    logger.debug(("discovered plugin %s is not enabled. "
+                               "skipping activation") % plugin.name)
+                continue
 
-            elif plugin in self:
-                plugin.unregister()
+            logger.info("activating plugin %s" % plugin.name)
+            if not plugin.is_activated:
+                plugin.activate()
+            no_plugins_activated = False
+
+        if no_plugins_activated:
+            raise NoPlugins("No plugins found or enabled.")
 
 
 class PersistPlugins(PluginManager):
@@ -141,9 +149,7 @@ class PersistPlugins(PluginManager):
         if 'backend' in kwargs:
             backend = kwargs['backend']
         else:
-            backend = self.root.call(Event('core', 'persist_backend',
-                                           default=None),
-                                     'get', target='config').value
+            backend = self.config.get('core', 'persist_backend', None)
 
         if backend is None:
             logger.error("no backend configured!")

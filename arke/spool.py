@@ -55,6 +55,10 @@ class Spooler(Component):
         self._dbenv = e
         self._db = d
 
+        for key in d.keys():
+            self.manager.queue.put(key)
+        self.fire(Event(), 'persist', target='persist')
+
 
     @handler('stopped')
     def close(self, *args, **kwargs):

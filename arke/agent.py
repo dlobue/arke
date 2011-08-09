@@ -1,86 +1,27 @@
 
 from Queue import Empty, Queue
-from time import time
 import logging
-import shelve
 import signal
-import optparse
 
+from simpledaemon import Daemon
 from gevent import monkey, spawn, sleep
 from gevent.pool import Pool
 
-#monkey.patch_all(httplib=True)
+monkey.patch_all(httplib=True)
 
-from circuits import Component, Event
-from circuits.core.handlers import HandlerMetaClass
-from circuits.app.config import Config as _Config
-
-from circuits import Debugger
-
-Config = HandlerMetaClass('Config', (_Config,), _Config.__dict__.copy())
 
 from arke.collect import Collect
 from arke.plugin import CollectPlugins
-from arke.persist import Persist
+from arke.spool import Spooler
+from arke.plugins import persist
 
 
 RETRY_INTERVAL_CAP = 300
 DEFAULT_CONFIG_FILE = '/etc/arke/arke.conf'
 
 
-def argparser():
-    p = optparse.OptionParser()
-    p.add_option('-c', dest='config_filename',
-                 action='store', default=DEFAULT_CONFIG_FILE,
-                 help='Specify alternate configuration file name')
-    p.add_option('-d', '--daemonize', dest='daemonize',
-                 action='store_true', default=False,
-                 help='Run in the foreground')
-    options, args = p.parse_args()
-
-
-class Agent(Component):
-    section = 'agent'
-    def __init__(self, config_file=DEFAULT_CONFIG_FILE):
-        super(Agent, self).__init__()
-
-        self.config = Config(config_file).register(self)
-        self.config.load()
-
-        self.collect_manager = CollectPlugins(base_class=Collect,
-                                             entry_points='arke_plugins',
-                                            ).register(self)
-        self.persist_manager = Persist(1).register(self)
-
-
-    def exception(self, *args, **kwargs):
-        from pprint import pprint
-        pprint(args)
-        pprint(kwargs)
-        raise SystemExit
-
-    def started(self, *args):
-        self.collect_manager.load()
-
-
-if __name__ == '__main__':
-    mylogger = logging.getLogger()
-    mylogger.setLevel(logging.DEBUG)
-    h = logging.StreamHandler()
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    h.setFormatter(formatter)
-    mylogger.addHandler(h)
-
-    import sys
-
-    (Agent(sys.argv[1]) + Debugger()).run()
-
-
-
-
 class NoPlugins(Exception): pass
 
-Daemon = object
 class agent_daemon(Daemon):
     default_conf = '/etc/arke/arke.conf'
     section = 'agent'

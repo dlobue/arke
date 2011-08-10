@@ -46,7 +46,11 @@ class agent_daemon(Daemon):
     def on_sigterm(self, signalnum, frame):
         logging.info("got sigterm")
         self.stop_now = True
-        self._gather_pool.kill()
+
+    def shutdown(self):
+        [x.deactivate() for x in self.collect_manager._plugins if x._timer is not None]
+        self._gather_pool.join()
+        self.spool.close()
 
     def add_signal_handlers(self):
         super(self.__class__, self).add_signal_handlers()
@@ -67,17 +71,13 @@ class agent_daemon(Daemon):
                                              entry_points='arke_plugins',
                                             )
 
-
         self.collect_manager.load(pool=self._gather_pool)
-        self.persist_runner()
-        #persist_runner = spawn(self.persist_runner)
+        try:
+            self.persist_runner()
+        except KeyboardInterrupt:
+            pass
 
-        #while 1:
-            #if self.stop_now and persist_runner.dead:
-                #break
-            #sleep(5)
-
-        self.spool.close()
+        self.shutdown()
 
 
 
@@ -104,6 +104,8 @@ class agent_daemon(Daemon):
                 continue
 
             pool.spawn(self.persist_data, item, self.spool, persist_backend)
+
+        pool.join()
 
 
     def persist_data(self, key, spool, persist_backend):

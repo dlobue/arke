@@ -64,8 +64,9 @@ class Collect(object):
 
     def deactivate(self):
         self.is_activated = False
-        self._timer.cancel()
-        self._timer = None
+        if self._timer is not None:
+            self._timer.cancel()
+            self._timer = None
 
     def _reset_timer(self):
         assert self._timer is None, "Trying to reset active timer!"

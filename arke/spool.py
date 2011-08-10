@@ -54,6 +54,7 @@ class Spooler(object):
         return self._db.keys()
 
     def close(self):
+        self._db.sync()
         self._db.close()
         self._dbenv.close()
         self._db = None

@@ -1,8 +1,8 @@
 
+import json
 from time import time
 import logging
 logger = logging.getLogger(__name__)
-import json
 
 from bson import json_util, BSON
 
@@ -21,7 +21,7 @@ class Collect(object):
 
     def get_setting(self, setting, fallback=None, opt_type=None):
         val = None
-        if self.config is not None:
+        if self.config is not None and self.config.has_option(self.section, setting):
             try:
                 getter = {int: 'getint',
                           float: 'getfloat',
@@ -29,7 +29,7 @@ class Collect(object):
                          }[opt_type]
             except KeyError:
                 getter = 'get'
-            val = getattr(self.config, getter)(self.section, setting, default=fallback)
+            val = getattr(self.config, getter)(self.section, setting)
 
         if val is None:
             #logger.debug("setting value is None. using defaults.")
@@ -50,7 +50,7 @@ class Collect(object):
         self.name = self.__class__.__name__
         self.section = 'plugin:%s' % self.name
         self._timer = None
-        self.is_active = False
+        self.is_activated = False
         assert 'interval' in self.default_config, (
             "Missing default interval value for %s plugin" % self.name)
 
@@ -59,11 +59,11 @@ class Collect(object):
         return self.get_setting('enabled', False, opt_type=bool)
 
     def activate(self):
-        self.is_active = True
+        self.is_activated = True
         self.run()
 
     def deactivate(self):
-        self.is_active = False
+        self.is_activated = False
         self._timer.cancel()
         self._timer = None
 
@@ -75,12 +75,15 @@ class Collect(object):
         if self.normalize:
             s = (s - (t % s))
 
-        self._timer = timer(s, self.run)
+        self._timer = timer(s, self._pool.spawn, self.run)
 
     def run(self):
         self._timer = None
-        self._reset_timer()
-        self._pool.spawn(self.gather_data)
+        logger.debug("Doing run for %s plugin." % self.name)
+        try:
+            self.gather_data()
+        finally:
+            self._reset_timer()
 
 
     def gather_data(self):
@@ -90,14 +93,15 @@ class Collect(object):
             'ctype': self.format,
         }
 
-        logger.debug("sourcetype: %r, timestamp: %r, extra: %r" % (sourcetype, timestamp, extra))
         try:
             data = self.serialize(self.collect())
+            logger.debug("Data collection for %s plugin completed" % self.name)
         except Exception:
             logger.exception("error occurred while gathering data for sourcetype %s" % sourcetype)
             return
 
         key = self.spool.append((sourcetype, timestamp, data, extra))
+        logger.debug("sourcetype: %r, key: %r, timestamp: %r, extra: %r" % (sourcetype, key, timestamp, extra))
         self.persist_queue.put(key)
 
     def serialize(self, data):

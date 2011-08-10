@@ -43,6 +43,7 @@ class Spooler(object):
         d.set_q_extentsize(4096)
         d.set_pagesize(4096)
 
+        #d.open(spool_file, db.DB_RECNO, db.DB_CREATE, 0600)
         d.open(spool_file, db.DB_RECNO, db.DB_CREATE | db.DB_AUTO_COMMIT, 0600)
 
         self._dbenv = e
@@ -58,8 +59,8 @@ class Spooler(object):
         self._db = None
         self._dbenv = None
 
-    def append(self, sourcetype, timestamp, data, extra=None):
-        s = dumps((sourcetype, timestamp, data, extra))
+    def append(self, data):
+        s = dumps(data)
         rid = self._db.append(s)
         return rid
 

@@ -88,7 +88,7 @@ class PluginManager(object):
                     logger.exception("Error loading module %s" % os.path.join(path, py_file))
 
 
-    def load(self, base_class=None):
+    def load(self, base_class=None, **kwargs):
         if base_class is None:
             base_class = self._base_class
 
@@ -134,7 +134,11 @@ class CollectPlugins(PluginManager):
 
             logger.info("activating plugin %s" % plugin.name)
             if not plugin.is_activated:
-                plugin.activate()
+                if 'pool' in kwargs:
+                    logger.debug("running activate method of plugin %s in greenlet" % plugin.name)
+                    kwargs['pool'].spawn(plugin.activate)
+                else:
+                    plugin.activate()
             no_plugins_activated = False
 
         if no_plugins_activated:

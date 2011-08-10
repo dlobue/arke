@@ -40,6 +40,7 @@ class mongodb(Collect):
             logger.exception("Error while collecting mongodb server status")
 
     def _coll_stats(self, connection):
+        logger.debug("Collecting mongodb collection status")
         for db_name in connection.database_names():
             if db_name in ('admin', 'local'):
                 continue

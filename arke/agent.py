@@ -1,13 +1,16 @@
 
+from gevent import monkey, spawn, sleep
+monkey.patch_all(httplib=True, thread=False)
+
 from Queue import Empty, Queue
 import logging
 import signal
 
+logger = logging.getLogger(__name__)
+
 from simpledaemon import Daemon
-from gevent import monkey, spawn, sleep
 from gevent.pool import Pool
 
-monkey.patch_all(httplib=True)
 
 
 from arke.collect import Collect
@@ -38,7 +41,7 @@ class agent_daemon(Daemon):
     def on_sighup(self, signalnum, frame):
         logging.info("got sighup")
         self.config_parser.read(self.default_conf)
-        self.load_plugins()
+        self.collect_manager.load(pool=self._gather_pool)
 
     def on_sigterm(self, signalnum, frame):
         logging.info("got sigterm")
@@ -65,13 +68,14 @@ class agent_daemon(Daemon):
                                             )
 
 
-        self.collect_manager.load()
-        persist_runner = spawn(self.persist_runner)
+        self.collect_manager.load(pool=self._gather_pool)
+        self.persist_runner()
+        #persist_runner = spawn(self.persist_runner)
 
-        while 1:
-            if self.stop_now and persist_runner.dead:
-                break
-            sleep(5)
+        #while 1:
+            #if self.stop_now and persist_runner.dead:
+                #break
+            #sleep(5)
 
         self.spool.close()
 
@@ -90,6 +94,7 @@ class agent_daemon(Daemon):
         pool = Pool(100)
 
         while 1:
+            item = None
             if self.stop_now:
                 break
             try:
@@ -102,18 +107,22 @@ class agent_daemon(Daemon):
 
 
     def persist_data(self, key, spool, persist_backend):
-        (sourcetype, timestamp, data, extra) = spool[key]
-        logging.debug("persisting data for %s sourcetype" % sourcetype)
+        if key is None:
+            logger.debug("Told to persist key None!")
+            return
+        (sourcetype, timestamp, data, extra) = spool.get(key)
 
         attempt = 1
         retry = .2
         while 1:
+            if self.stop_now:
+                return
             try:
+                logging.debug("persisting data- key: %r, sourcetype: %s, timestamp: %r, attempt: %r" % (key, sourcetype, timestamp, attempt))
                 persist_backend.write(sourcetype, timestamp, data, self.hostname, extra)
+                break
             except Exception:
                 logging.exception("attempt %s trying to persist %s data. spool key: %s" % (attempt, sourcetype, key))
-            else:
-                break
 
             sleep(retry)
             if retry < RETRY_INTERVAL_CAP:
@@ -123,6 +132,6 @@ class agent_daemon(Daemon):
         spool.delete(key)
 
 
-#if __name__ == '__main__':
-    #agent_daemon().main()
+if __name__ == '__main__':
+    agent_daemon().main()
 

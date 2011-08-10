@@ -22,7 +22,7 @@ setup(name='arke',
       install_requires=[
           "pymongo>=1.10",
           "gevent>=0.13.6",
-          "psutil>=0.2.1",
+          "psutil>=0.3.0",
           "paramiko",
           "boto>=2.0rc1",
           "psycopg2>=2.4.2",

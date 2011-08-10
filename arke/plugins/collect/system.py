@@ -1,7 +1,5 @@
 
 import logging
-from subprocess import Popen, PIPE
-from threading import Timer
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +43,7 @@ class system(Collect):
                 proto=self._net_proto()
             ),
             io=self._io_stats(),
-            fs=self._fs_usage(),
+            fs=dict(self._fs_usage()),
             fh=self._file_handles(),
         )
 
@@ -146,44 +144,15 @@ class system(Collect):
         return results
 
     def _fs_usage(self):
-        def numbify(x):
-            try:
-                return int(x)
-            except ValueError:
-                return x
-
-        cmd = ['df', '-x', 'tmpfs', '-x', 'devtmpfs', '-x', 'debugfs', '--block-size=1']
-        process = Popen(cmd, stdout=PIPE)
-        timer = Timer(2, process.kill)
-        timed_out = True
-        timer.start()
-        output, unused_err = process.communicate()
-        retcode = process.poll()
-        if timer.is_alive():
-            timer.cancel()
-            timed_out = False
-
-        if retcode:
-            logging.error(("Attempt to get output of df failed. Exit code: %i.\n"
-                           "cmd: %s\nstdout: %s\nstderr: %s\ntimed out: %s") % \
-                         (retcode, cmd.join(' '), output, unused_err, timed_out))
-            return None
-
-        results = {}
-        cols = ('filesystem', 'total', 'used', 'avail', 'percent')
-        output = output.replace('%','').splitlines()
-        for line in output[1:]:
-            data = line.split()
-            mount = data.pop()
-            results[mount] = dict(zip(cols, map(numbify, data)))
-
-        return results
-
+        for partition in psutil.disk_partitions():
+            usage = psutil.disk_usage(partition.mountpoint)._asdict()
+            usage['filesystem'] = partition.device
+            yield (partition.mountpoint, usage)
 
 
             
 if __name__ == '__main__':
     from pprint import pprint
 
-    pprint(system().collect())
+    pprint(system(None,None,None,None).collect())
 

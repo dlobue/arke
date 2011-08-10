@@ -27,6 +27,7 @@ setup(name='arke',
           "boto>=2.0rc1",
           "psycopg2>=2.4.2",
           "simpledaemon",
+          "bsddb3",
       ],
       entry_points="""
       # -*- Entry points: -*-

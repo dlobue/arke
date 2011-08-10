@@ -73,7 +73,9 @@ class MultiCollect(Collect):
             if server['fqdn'] == hostname:
                 return
             try:
-                data = self.serialize(self.collect(server, hostname))
+                data = self.serialize(
+                    self._format(
+                        self.collect(server, hostname)))
             except Exception:
                 logger.exception("error occurred while gathering data for sourcetype %s" % sourcetype)
                 return
@@ -84,3 +86,13 @@ class MultiCollect(Collect):
         for server in self.iter_servers():
             pool.spawn(_gather, server)
 
+
+    def _format(self, data):
+        if hasattr(data, '__iter__') and not hasattr(data, 'keys'):
+            data = {'$each': data }
+        d = {'$addToSet':
+             {'data':
+              data
+             }
+            }
+        return d

@@ -39,7 +39,7 @@ class http_backend(ipersist):
                 headers['Content-type'] = self.content_type_map[extra['ctype']]
             headers['extra'] = json.dumps(extra, default=json_util.default)
 
-        conn.request('PUT', uri, body=data, headers=headers)
+        conn.request('POST', uri, body=data, headers=headers)
         resp = conn.getresponse()
 
         assert resp.status in (200,204), "Didn't get 200 from remote server!"

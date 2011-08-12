@@ -49,8 +49,10 @@ class Collect(object):
         self.persist_queue = persist_queue
         self.name = self.__class__.__name__
         self.section = 'plugin:%s' % self.name
-        self._timer = None
-        self.is_activated = False
+        if not hasattr(self, '_timer'):
+            self._timer = None
+        if not hasattr(self, 'is_activated'):
+            self.is_activated = False
         assert 'interval' in self.default_config, (
             "Missing default interval value for %s plugin" % self.name)
 

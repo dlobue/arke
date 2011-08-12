@@ -132,8 +132,8 @@ class CollectPlugins(PluginManager):
                                "skipping activation") % plugin.name)
                 continue
 
-            logger.info("activating plugin %s" % plugin.name)
             if not plugin.is_activated:
+                logger.info("activating plugin %s" % plugin.name)
                 if 'pool' in kwargs:
                     logger.debug("running activate method of plugin %s in greenlet" % plugin.name)
                     kwargs['pool'].spawn(plugin.activate)

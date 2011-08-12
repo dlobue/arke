@@ -40,7 +40,7 @@ class agent_daemon(Daemon):
 
     def on_sighup(self, signalnum, frame):
         logging.info("got sighup")
-        self.config_parser.read(self.default_conf)
+        self.config_parser.read(self.config_filename)
         self.collect_manager.load(pool=self._gather_pool)
 
     def on_sigterm(self, signalnum, frame):

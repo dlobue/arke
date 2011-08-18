@@ -44,3 +44,6 @@ class http_backend(ipersist):
 
         assert resp.status in (200,204), "Didn't get 200 from remote server!"
 
+    def batch_write(self, spool_file):
+        pass
+

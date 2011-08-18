@@ -1,6 +1,6 @@
 
 import logging
-from time import time
+from time import time, sleep
 from socket import error, timeout
 
 logger = logging.getLogger(__name__)
@@ -8,6 +8,9 @@ logger = logging.getLogger(__name__)
 import boto
 
 from arke.collect import Collect
+
+BATCH_MAX_WAIT = 2
+BATCH_INTERVAL = .1
 
 class MultiCollect(Collect):
     normalize = True
@@ -69,22 +72,43 @@ class MultiCollect(Collect):
         hostname = self.config.get('core', 'hostname')
         logger.debug("sourcetype: %r, timestamp: %r, extra: %r" % (sourcetype, timestamp, extra))
 
+        data_batch = []
+
+        def _persist(data):
+            data = self.serialize( self._format(data))
+            key = self.spool.append((sourcetype, timestamp, data, extra))
+            self.persist_queue.put(key)
+
+        persist_handler = data_batch.append
+
         def _gather(server):
             if server['fqdn'] == hostname:
                 return
             try:
-                data = self.serialize(
-                    self._format(
-                        self.collect(server, hostname)))
+                data = self.collect(server, hostname)
             except Exception:
                 logger.exception("error occurred while gathering data for sourcetype %s" % sourcetype)
                 return
-            key = self.spool.append((sourcetype, timestamp, data, extra))
-            self.persist_queue.put(key)
+            persist_handler(data)
 
+        total_servers = 0
         pool = self._pool
         for server in self.iter_servers():
+            total_servers += 1
             pool.spawn(_gather, server)
+
+        c = 0
+        while c < BATCH_MAX_WAIT:
+            if len(data_batch) == total_servers:
+                break
+            sleep(BATCH_INTERVAL)
+            c += BATCH_INTERVAL
+
+        persist_handler = _persist
+        logger.debug("Batched %i replies out of a total of %i" % (len(data_batch), total_servers))
+        _persist(data_batch)
+
+
 
 
     def _format(self, data):

@@ -46,6 +46,7 @@ class http_backend(ipersist):
 
 
     def batch_write(self, spool_file):
+        spool_file.seek(0)
         conn = self.get_connection()
         uri = '/batch_store'
         headers = {}

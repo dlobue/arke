@@ -1,5 +1,6 @@
 
 import json
+from datetime import datetime
 from time import time
 import logging
 logger = logging.getLogger(__name__)
@@ -90,7 +91,7 @@ class Collect(object):
 
 
     def gather_data(self):
-        timestamp = time()
+        timestamp = datetime.utcnow()
         sourcetype = self.name
         extra = {
             #'ctype': self.format,
@@ -104,7 +105,7 @@ class Collect(object):
             logger.exception("error occurred while gathering data for sourcetype %s" % sourcetype)
             return
 
-        logger.debug("sourcetype: %r, timestamp: %r, extra: %r" % (sourcetype, timestamp, extra))
+        logger.debug("sourcetype: %r, timestamp: %s, extra: %r" % (sourcetype, timestamp, extra))
         self.spool.append(sourcetype, timestamp, data, extra)
         #key = self.spool.append((sourcetype, timestamp, data, extra))
         #logger.debug("sourcetype: %r, key: %r, timestamp: %r, extra: %r" % (sourcetype, key, timestamp, extra))

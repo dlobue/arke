@@ -1,5 +1,6 @@
 
 import logging
+from datetime import datetime
 from time import time, sleep
 from socket import error, timeout
 
@@ -59,7 +60,7 @@ class MultiCollect(Collect):
             yield server
 
     def gather_data(self):
-        timestamp = time()
+        timestamp = datetime.utcnow()
         sourcetype = self.name
         extra = {'timestamp_as_id': True,
                  #'custom_schema': True,
@@ -67,10 +68,11 @@ class MultiCollect(Collect):
                 }
 
         #normalize timestamp so we can sync up with other servers
-        timestamp = timestamp - (timestamp % self.get_setting('interval', opt_type=int))
+        second = timestamp.second - (timestamp.second % self.get_setting('interval', opt_type=int))
+        timestamp = timestamp.replace(second=second, microsecond=0)
 
         hostname = self.config.get('core', 'hostname')
-        logger.debug("sourcetype: %r, timestamp: %r, extra: %r" % (sourcetype, timestamp, extra))
+        logger.debug("sourcetype: %r, timestamp: %s, extra: %r" % (sourcetype, timestamp, extra))
 
         data_batch = []
 

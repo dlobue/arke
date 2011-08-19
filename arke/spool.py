@@ -1,5 +1,6 @@
 
-from os import makedirs, remove, listdir
+from datetime import datetime
+from os import makedirs, remove, listdir, stat
 from os.path import basename, isdir, exists, join as path_join
 from json import dumps as json_dumps
 from time import time
@@ -63,21 +64,37 @@ class Spooler(object):
     def append(self, sourcetype, timestamp, data, extra):
         s = json_dumps([timestamp, data], default=json_util_default)
 
-        with self._lock:
+        def _open():
             _f = self._get_file(sourcetype)
+            new = False
             if not _f.tell():
+                new = True
                 #new file, needs metadata
                 hostname = self.config.get('core', 'hostname')
+                extra['started_timestamp'] = timestamp
                 m = json_dumps([hostname, sourcetype, extra],
                                default=json_util_default)
                 _f.write(str(len(m)) + '\n' + m)
+            return _f, new
+
+        def _close(_f):
+            _f.flush()
+            _f.close()
+            self._file_registry.pop(sourcetype)
+            self._queue.append(_f.name)
+
+        with self._lock:
+            _f, new = _open()
+            if not new and datetime.utcnow().month != \
+               datetime.utcfromtimestamp(stat(_f.name).st_ctime).month:
+                #need to make sure that batching doesn't accidentally mix
+                #data from different months in the same collection
+                _close(_f)
+                _f, _ = _open()
 
             _f.write(str(len(s)) + '\n' + s)
             if _f.tell() > MAX_SPOOL_FILE_SIZE:
-                _f.flush()
-                _f.close()
-                self._file_registry.pop(sourcetype)
-                self._queue.append(_f.name)
+                _close(_f)
 
         if self._not_empty._is_owned():
             self._not_empty.notify()

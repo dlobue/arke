@@ -93,19 +93,22 @@ class Collect(object):
         timestamp = time()
         sourcetype = self.name
         extra = {
-            'ctype': self.format,
+            #'ctype': self.format,
         }
 
         try:
-            data = self.serialize(self.collect())
+            #data = self.serialize(self.collect())
+            data = self.collect()
             logger.debug("Data collection for %s plugin completed" % self.name)
         except Exception:
             logger.exception("error occurred while gathering data for sourcetype %s" % sourcetype)
             return
 
-        key = self.spool.append((sourcetype, timestamp, data, extra))
-        logger.debug("sourcetype: %r, key: %r, timestamp: %r, extra: %r" % (sourcetype, key, timestamp, extra))
-        self.persist_queue.put(key)
+        logger.debug("sourcetype: %r, timestamp: %r, extra: %r" % (sourcetype, timestamp, extra))
+        self.spool.append(sourcetype, timestamp, data, extra)
+        #key = self.spool.append((sourcetype, timestamp, data, extra))
+        #logger.debug("sourcetype: %r, key: %r, timestamp: %r, extra: %r" % (sourcetype, key, timestamp, extra))
+        #self.persist_queue.put(key)
 
     def serialize(self, data):
         if not self.format:

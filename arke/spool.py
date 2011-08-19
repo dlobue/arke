@@ -1,29 +1,51 @@
 
-from os import path, makedirs, remove, listdir
-from time import time as _time
-from uuid import uuid4
+from os import makedirs, remove, listdir
+from os.path import basename, isdir, exists, join as path_join
+from time import time
 import logging
 from Queue import Empty
 from threading import Lock, Condition
+from collections import deque
 
 logger = logging.getLogger(__name__)
 
+from bson import BSON
+
+MAX_SPOOL_FILE_SIZE = 1024 * 1024 * 10
+
+def get_sourcetype_from_filename(fname):
+    if isinstance(fname, file):
+        fname = fname.name
+    fname = basename(fname)
+    return fname[:fname.rindex('_')]
+
 class Spooler(object):
     def __init__(self, config):
+        self.config = config
+        self.spool_dir = config.get('core', 'spool_dir')
+        if not isdir(self.spool_dir):
+            assert not exists(self.spool_dir), "specified spool_dir %s already exists, and isn't a dir!" % self.spool_dir
+            makedirs(self.spool_dir)
+        self._file_registry = {}
+        self._sourcetype_registry = []
+        self._queue = deque(self.keys())
         self._lock = Lock()
         self._not_empty = Condition(self._lock)
-        self.config = config
-        self._spool_dir = config.get('core', 'spool_dir')
-        makedirs(self._spool_dir)
-        self._open()
 
-    def _open(self):
-        with self._lock:
-            self._file = open(path.join(self._spool_dir, uuid4().hex), 'a')
+    def _open(self, sourcetype):
+        if sourcetype not in self._sourcetype_registry:
+            self._sourcetype_registry.append(sourcetype)
+        fname = path_join(self._spool_dir, '%s_%f' % (sourcetype, time()))
+        self._file_registry[sourcetype] = open(fname, 'a')
+
+    def _get_file(self, sourcetype):
+        if sourcetype not in self._file_registry:
+            self._open(sourcetype)
+        return self._file_registry[sourcetype]
 
     def keys(self):
-        spool_dir = self._spool_dir
-        return (path.join(spool_dir, f) for f in listdir(spool_dir))
+        spool_dir = self.spool_dir
+        return (path_join(spool_dir, f) for f in listdir(spool_dir))
 
     def items(self):
         return ((f, open(f, 'r')) for f in self.keys())
@@ -32,37 +54,75 @@ class Spooler(object):
         return (v for k,v in self.items())
 
     def close(self):
-        self._file.flush()
-        self._file.close()
+        def _close(fh):
+            fh.flush()
+            fh.close()
+        map(_close, self._file_registry.values())
 
-    def append(self, data):
+    def append(self, sourcetype, timestamp, data, extra):
+        s = BSON.encode(dict(
+            s=sourcetype,
+            t=timestamp,
+            d=data,
+            e=extra,
+        ))
+
         with self._lock:
-            self._file.write(data + '\n')
+            _f = self._get_file(sourcetype)
+            _f.write(str(len(s)) + '\n' + s)
+            if _f.tell() > MAX_SPOOL_FILE_SIZE:
+                _f.flush()
+                _f.close()
+                self._file_registry.pop(sourcetype)
+                self._queue.append(_f.name)
+
         self._not_empty.notify()
 
     def delete(self, file_handle):
         fn = file_handle.name
+        logger.debug("Deleting spool file %s" % fn)
         file_handle.close()
         remove(fn)
 
     def get(self, timeout=None):
-        self._not_empty.acquire()
-        try:
-            _f = self._file
-            if not _f.tell() and timeout is None:
-                raise Empty
-            else:
+        if self._queue:
+            _f = open(self._queue.pop(), 'r')
+            sourcetype = get_sourcetype_from_filename(_f)
+            logger.debug("Returning spool_file %s of sourcetype %s from spooler queue." % (_f.name, sourcetype))
+            return sourcetype, _f
+
+        with self._not_empty as ne_cond:
+
+            not_empty = filter(lambda x: self._get_file(x).tell(),
+                               self._sourcetype_registry)
+
+            if not not_empty:
+                if timeout is None:
+                    raise Empty
+
                 assert isinstance(timeout, int) and timeout > 0
-                endtime = _time() + timeout
-                while not _f.tell():
-                    remaining = endtime - _time()
+                endtime = time() + timeout
+                while not not_empty or not self._queue:
+                    remaining = endtime - time()
                     if remaining <= 0.0:
                         raise Empty
-                    self.not_empty.wait(remaining)
+                    ne_cond.wait(remaining)
+                    not_empty = filter(lambda x: self._get_file(x).tell(),
+                                       self._sourcetype_registry)
 
-            self._open()
+                if self._queue:
+                    _f = open(self._queue.pop(), 'r')
+                    sourcetype = get_sourcetype_from_filename(_f)
+                    logger.debug("Returning spool_file %s of sourcetype %s from spooler completed queue." % (_f.name, sourcetype))
+                    return sourcetype, _f
+
+            sourcetype = not_empty[0]
+            _f = self._file_registry.pop(sourcetype)
             _f.flush()
-            return _f
-        finally:
-            self._not_empty.release()
+            fname = _f.name
+            _f.close()
+            sr = self._sourcetype_registry
+            sr.append( sr.pop( sr.index( sourcetype )))
+            logger.debug("Returning spool_file %s of sourcetype %s from spooler active registry." % (_f.name, sourcetype))
+            return sourcetype, open(fname, 'r')
 

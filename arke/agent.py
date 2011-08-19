@@ -62,7 +62,7 @@ class agent_daemon(Daemon):
 
     def run(self):
         logging.debug("initializing spool")
-        self.spool = spool = Spooler(self.config_parser).open()
+        self.spool = spool = Spooler(self.config_parser)
         self._gather_pool = pool = Pool(GATHER_POOL_WORKERS)
 
         config = self.config_parser

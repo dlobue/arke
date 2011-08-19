@@ -103,17 +103,17 @@ class agent_daemon(Daemon):
                 break
             try:
                 #item = self.persist_queue.get(True, 5)
-                sourcetype, spool_file = spool.get(5)
+                spool_file = spool.get(5)
             except Empty:
                 sleep(1)
                 continue
 
-            pool.spawn(self.persist_data, sourcetype, spool_file, persist_backend)
+            pool.spawn(self.persist_data, spool_file, persist_backend)
 
         pool.join()
 
 
-    def persist_data(self, sourcetype, spool_file, persist_backend):
+    def persist_data(self, spool_file, persist_backend):
         if spool_file is None:
             logger.debug("Told to persist spool_file None!")
             return
@@ -126,12 +126,12 @@ class agent_daemon(Daemon):
                 return
             try:
                 #logging.debug("persisting data- key: %r, sourcetype: %s, timestamp: %r, attempt: %r" % (key, sourcetype, timestamp, attempt))
-                logging.debug("persisting data- spool_file: %s, sourcetype: %s, attempt: %r" % (spool_file.name, sourcetype, attempt))
-                persist_backend.batch_write(sourcetype, spool_file, self.hostname)
+                logging.debug("persisting data- spool_file: %s, attempt: %r" % (spool_file.name, attempt))
+                persist_backend.batch_write(spool_file)
                 #persist_backend.write(sourcetype, timestamp, data, self.hostname, extra)
                 break
             except Exception:
-                logging.exception("attempt %s trying to persist %s data. spool_file: %s" % (attempt, sourcetype, spool_file.name))
+                logging.exception("attempt %s trying to persist spool_file: %s" % (attempt, spool_file.name))
 
             sleep(retry)
             if retry < RETRY_INTERVAL_CAP:

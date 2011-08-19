@@ -45,9 +45,9 @@ class http_backend(ipersist):
         assert resp.status in (200,204), "Didn't get 200 from remote server!"
 
 
-    def batch_write(self, sourcetype, spool_file, hostname):
+    def batch_write(self, spool_file):
         conn = self.get_connection()
-        uri = '/batch_store/%s/%s' % (hostname, sourcetype)
+        uri = '/batch_store'
         headers = {}
         conn.request('POST', uri, body=spool_file, headers=headers)
         resp = conn.getresponse()

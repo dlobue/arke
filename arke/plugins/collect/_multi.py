@@ -62,7 +62,7 @@ class MultiCollect(Collect):
         timestamp = time()
         sourcetype = self.name
         extra = {'timestamp_as_id': True,
-                 'custom_schema': True,
+                 #'custom_schema': True,
                  #'ctype': self.format,
                 }
 
@@ -76,7 +76,7 @@ class MultiCollect(Collect):
 
         def _persist(data):
             #data = self.serialize( self._format(data))
-            data = self._format(data)
+            #data = self._format(data)
             self.spool.append(sourcetype, timestamp, data, extra)
             #key = self.spool.append((sourcetype, timestamp, data, extra))
             #self.persist_queue.put(key)

@@ -1,6 +1,7 @@
 
 from os import makedirs, remove, listdir
 from os.path import basename, isdir, exists, join as path_join
+from json import dumps as json_dumps
 from time import time
 import logging
 from Queue import Empty
@@ -9,7 +10,7 @@ from collections import deque
 
 logger = logging.getLogger(__name__)
 
-from bson import BSON
+from bson.json_util import default as json_util_default
 
 MAX_SPOOL_FILE_SIZE = 1024 * 1024 * 10
 
@@ -60,15 +61,17 @@ class Spooler(object):
         map(_close, self._file_registry.values())
 
     def append(self, sourcetype, timestamp, data, extra):
-        s = BSON.encode(dict(
-            s=sourcetype,
-            t=timestamp,
-            d=data,
-            e=extra,
-        ))
+        s = json_dumps([timestamp, data], default=json_util_default)
 
         with self._lock:
             _f = self._get_file(sourcetype)
+            if not _f.tell():
+                #new file, needs metadata
+                hostname = self.config.get('core', 'hostname')
+                m = json_dumps([hostname, sourcetype, extra],
+                               default=json_util_default)
+                _f.write(str(len(m)) + '\n' + m)
+
             _f.write(str(len(s)) + '\n' + s)
             if _f.tell() > MAX_SPOOL_FILE_SIZE:
                 _f.flush()
@@ -87,9 +90,8 @@ class Spooler(object):
     def get(self, timeout=None):
         if self._queue:
             _f = open(self._queue.pop(), 'r')
-            sourcetype = get_sourcetype_from_filename(_f)
-            logger.debug("Returning spool_file %s of sourcetype %s from spooler queue." % (_f.name, sourcetype))
-            return sourcetype, _f
+            logger.debug("Returning spool_file %s from spooler queue." % _f.name)
+            return _f
 
         with self._not_empty as ne_cond:
 
@@ -112,9 +114,8 @@ class Spooler(object):
 
                 if self._queue:
                     _f = open(self._queue.pop(), 'r')
-                    sourcetype = get_sourcetype_from_filename(_f)
-                    logger.debug("Returning spool_file %s of sourcetype %s from spooler completed queue." % (_f.name, sourcetype))
-                    return sourcetype, _f
+                    logger.debug("Returning spool_file %s from spooler queue." % _f.name)
+                    return _f
 
             sourcetype = not_empty[0]
             _f = self._file_registry.pop(sourcetype)
@@ -123,6 +124,6 @@ class Spooler(object):
             _f.close()
             sr = self._sourcetype_registry
             sr.append( sr.pop( sr.index( sourcetype )))
-            logger.debug("Returning spool_file %s of sourcetype %s from spooler active registry." % (_f.name, sourcetype))
-            return sourcetype, open(fname, 'r')
+            logger.debug("Returning spool_file %s from spooler active registry." % _f.name)
+            return open(fname, 'r')
 

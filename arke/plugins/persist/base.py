@@ -1,7 +1,4 @@
 
-import json
-
-from bson import json_util, BSON
 
 class ipersist(object):
     def __init__(self, config_parser):

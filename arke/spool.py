@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 from bson.json_util import default as json_util_default
 
-MAX_SPOOL_FILE_SIZE = 1024 * 1024 * 10
+MAX_SPOOL_FILE_SIZE = 1024 * 1024 * 1
 
 def get_sourcetype_from_filename(fname):
     if isinstance(fname, file):

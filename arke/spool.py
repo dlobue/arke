@@ -36,7 +36,7 @@ class Spooler(object):
     def _open(self, sourcetype):
         if sourcetype not in self._sourcetype_registry:
             self._sourcetype_registry.append(sourcetype)
-        fname = path_join(self._spool_dir, '%s_%f' % (sourcetype, time()))
+        fname = path_join(self.spool_dir, '%s_%f' % (sourcetype, time()))
         self._file_registry[sourcetype] = open(fname, 'a')
 
     def _get_file(self, sourcetype):
@@ -79,7 +79,8 @@ class Spooler(object):
                 self._file_registry.pop(sourcetype)
                 self._queue.append(_f.name)
 
-        self._not_empty.notify()
+        if self._not_empty._is_owned():
+            self._not_empty.notify()
 
     def delete(self, file_handle):
         fn = file_handle.name
@@ -93,7 +94,7 @@ class Spooler(object):
             logger.debug("Returning spool_file %s from spooler queue." % _f.name)
             return _f
 
-        with self._not_empty as ne_cond:
+        with self._not_empty:
 
             not_empty = filter(lambda x: self._get_file(x).tell(),
                                self._sourcetype_registry)
@@ -108,7 +109,7 @@ class Spooler(object):
                     remaining = endtime - time()
                     if remaining <= 0.0:
                         raise Empty
-                    ne_cond.wait(remaining)
+                    self._not_empty.wait(remaining)
                     not_empty = filter(lambda x: self._get_file(x).tell(),
                                        self._sourcetype_registry)
 

@@ -91,31 +91,33 @@ class agent_daemon(Daemon):
 
         persist_backend = persist_backend(self.config_parser)
 
-        for key in self.spool.keys():
-            self.persist_queue.put(key)
+        #for key in self.spool.keys():
+            #self.persist_queue.put(key)
+        spool = self.spool
 
         self.persist_pool = pool = Pool(PERSIST_POOL_WORKERS)
 
         while 1:
-            item = None
+            spool_file = None
             if self.stop_now:
                 break
             try:
-                item = self.persist_queue.get(True, 5)
+                #item = self.persist_queue.get(True, 5)
+                sourcetype, spool_file = spool.get(5)
             except Empty:
                 sleep(1)
                 continue
 
-            pool.spawn(self.persist_data, item, self.spool, persist_backend)
+            pool.spawn(self.persist_data, sourcetype, spool_file, persist_backend)
 
         pool.join()
 
 
-    def persist_data(self, key, spool, persist_backend):
-        if key is None:
-            logger.debug("Told to persist key None!")
+    def persist_data(self, sourcetype, spool_file, persist_backend):
+        if spool_file is None:
+            logger.debug("Told to persist spool_file None!")
             return
-        (sourcetype, timestamp, data, extra) = spool.get(key)
+        #(sourcetype, timestamp, data, extra) = spool.get(key)
 
         attempt = 1
         retry = .2
@@ -123,18 +125,20 @@ class agent_daemon(Daemon):
             if self.stop_now:
                 return
             try:
-                logging.debug("persisting data- key: %r, sourcetype: %s, timestamp: %r, attempt: %r" % (key, sourcetype, timestamp, attempt))
-                persist_backend.write(sourcetype, timestamp, data, self.hostname, extra)
+                #logging.debug("persisting data- key: %r, sourcetype: %s, timestamp: %r, attempt: %r" % (key, sourcetype, timestamp, attempt))
+                logging.debug("persisting data- spool_file: %s, sourcetype: %s, attempt: %r" % (spool_file.name, sourcetype, attempt))
+                persist_backend.batch_write(sourcetype, spool_file, self.hostname)
+                #persist_backend.write(sourcetype, timestamp, data, self.hostname, extra)
                 break
             except Exception:
-                logging.exception("attempt %s trying to persist %s data. spool key: %s" % (attempt, sourcetype, key))
+                logging.exception("attempt %s trying to persist %s data. spool_file: %s" % (attempt, sourcetype, spool_file.name))
 
             sleep(retry)
             if retry < RETRY_INTERVAL_CAP:
                 retry = attempt * 2
             attempt += 1
 
-        spool.delete(key)
+        self.spool.delete(spool_file)
 
 
 if __name__ == '__main__':

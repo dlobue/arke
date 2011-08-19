@@ -8,7 +8,7 @@ class ipersist(object):
         self.config = config_parser
         self.section = 'backend:%s' % self.__class__.__name__.replace('_backend', '')
 
-    def batch_write(self, spool_file):
+    def batch_write(self, sourcetype, spool_file, hostname):
         raise NotImplemented
 
     def write(self, sourcetype, timestamp, data, hostname, extra):

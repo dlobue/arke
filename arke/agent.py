@@ -22,6 +22,9 @@ from arke.plugins import persist
 RETRY_INTERVAL_CAP = 300
 DEFAULT_CONFIG_FILE = '/etc/arke/arke.conf'
 
+GATHER_POOL_WORKERS = 1000
+PERSIST_POOL_WORKERS = 10
+
 
 class NoPlugins(Exception): pass
 
@@ -60,7 +63,7 @@ class agent_daemon(Daemon):
     def run(self):
         logging.debug("initializing spool")
         self.spool = spool = Spooler(self.config_parser).open()
-        self._gather_pool = pool = Pool(1000)
+        self._gather_pool = pool = Pool(GATHER_POOL_WORKERS)
 
         config = self.config_parser
         persist_queue = self.persist_queue
@@ -91,7 +94,7 @@ class agent_daemon(Daemon):
         for key in self.spool.keys():
             self.persist_queue.put(key)
 
-        pool = Pool(100)
+        self.persist_pool = pool = Pool(PERSIST_POOL_WORKERS)
 
         while 1:
             item = None

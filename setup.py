@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 import sys, os
 
-version = '0.3.1'
+version = '0.4.0'
 
 setup(name='arke',
       version=version,
@@ -27,7 +27,6 @@ setup(name='arke',
           "boto>=2.0rc1",
           "psycopg2>=2.4.2",
           "simpledaemon",
-          "bsddb3",
       ],
       entry_points="""
       # -*- Entry points: -*-

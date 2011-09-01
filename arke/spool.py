@@ -30,9 +30,20 @@ class Spooler(object):
             makedirs(self.spool_dir)
         self._file_registry = {}
         self._sourcetype_registry = []
+        self._remote_empties()
         self._queue = deque(self.keys())
         self._lock = Lock()
         self._not_empty = Condition(self._lock)
+
+    def _remote_empties(self):
+        files = self.keys()
+        while 1:
+            try:
+                f = files.next()
+            except StopIteration:
+                break
+            if not stat(f).st_size:
+                remove(f)
 
     def _open(self, sourcetype):
         if sourcetype not in self._sourcetype_registry:
@@ -60,6 +71,7 @@ class Spooler(object):
             fh.flush()
             fh.close()
         map(_close, self._file_registry.values())
+        self._remote_empties()
 
     def append(self, sourcetype, timestamp, data, extra):
         s = json_dumps([timestamp, data], default=json_util_default)

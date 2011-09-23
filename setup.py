@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 import sys, os
 
-version = '0.4.0'
+version = '0.4.1'
 
 setup(name='arke',
       version=version,
@@ -20,7 +20,7 @@ setup(name='arke',
       data_files=[('/etc/init', ['init_scripts/arke.conf']),
                  ],
       install_requires=[
-          "pymongo>=1.10,<2",
+          "pymongo>=1.10",
           "gevent>=0.13.6",
           "psutil>=0.3.0",
           "paramiko",

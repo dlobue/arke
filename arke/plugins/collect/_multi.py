@@ -106,15 +106,3 @@ class MultiCollect(Collect):
         logger.debug("Batched %i replies out of a total of %i" % (len(data_batch), total_servers))
         _persist(data_batch)
 
-
-
-
-    def _format(self, data):
-        if hasattr(data, '__iter__') and not hasattr(data, 'keys'):
-            data = {'$each': data }
-        d = {'$addToSet':
-             {'data':
-              data
-             }
-            }
-        return d

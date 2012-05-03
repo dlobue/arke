@@ -103,6 +103,7 @@ class MultiCollect(Collect):
             c += BATCH_INTERVAL
 
         persist_handler = _persist
-        logger.debug("Batched %i replies out of a total of %i" % (len(data_batch), total_servers))
-        _persist(data_batch)
+        if data_batch:
+            logger.debug("Batched %i replies out of a total of %i" % (len(data_batch), total_servers))
+            _persist(data_batch)
 

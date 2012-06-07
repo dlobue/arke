@@ -1,14 +1,16 @@
 
-from gevent import monkey, spawn, sleep
+from gevent import monkey, sleep
 monkey.patch_all(httplib=True, thread=False)
 
 from Queue import Empty, Queue
+import ConfigParser
+import optparse
+import os
 import logging
 import signal
 
 logger = logging.getLogger(__name__)
 
-from simpledaemon import Daemon
 from gevent.pool import Pool
 
 
@@ -28,12 +30,17 @@ PERSIST_POOL_WORKERS = 10
 
 class NoPlugins(Exception): pass
 
-class agent_daemon(Daemon):
+class agent_daemon(object):
     default_conf = '/etc/arke/arke.conf'
     section = 'agent'
 
     def read_basic_config(self):
-        super(agent_daemon, self).read_basic_config()
+        self.config_filename = self.options.config_filename
+        cp = ConfigParser.ConfigParser()
+        cp.read([self.config_filename])
+        self.config_parser = cp
+
+
         self.hostname = self.config_parser.get('core', 'hostname')
 
     def __init__(self):
@@ -56,9 +63,69 @@ class agent_daemon(Daemon):
         self.spool.close()
 
     def add_signal_handlers(self):
-        super(self.__class__, self).add_signal_handlers()
+        signal.signal(signal.SIGTERM, self.on_sigterm)
         signal.signal(signal.SIGHUP, self.on_sighup)
         signal.signal(signal.SIGINT, self.on_sigterm)
+
+
+
+
+    def config_logging(self):
+        if self.config_parser.has_option(self.section, 'logconfig'):
+            import logging.config
+            logging.config.fileConfig( self.config_parser.get(self.section, 'logconfig') )
+        else:
+            self._config_logging()
+
+    def _config_logging(self):
+        """Configure the logging module"""
+        self.logfile = self.config_parser.get(self.section, 'logfile')
+        loglevel = self.config_parser.get(self.section, 'loglevel')
+
+        try:
+            level = int(loglevel)
+        except ValueError:
+            level = int(logging.getLevelName(loglevel.upper()))
+
+
+        handlers = []
+        if self.config_parser.has_option(self.section, 'logfile'):
+            logfile = self.config_parser.get(self.section, 'logfile').strip()
+
+        if logfile:
+            handlers.append(logging.FileHandler(logfile))
+        else:
+            handlers.append(logging.StreamHandler())
+
+        log = logging.getLogger()
+        log.setLevel(level)
+        for h in handlers:
+            h.setFormatter(logging.Formatter(
+                "%(asctime)s %(process)d %(levelname)s %(message)s"))
+            log.addHandler(h)
+
+
+    def main(self):
+        """Read the command line and either start or stop the daemon"""
+        self.parse_options()
+        self.read_basic_config()
+        self.add_signal_handlers()
+        self.config_logging()
+
+
+    def parse_options(self):
+        """Parse the command line"""
+        p = optparse.OptionParser()
+        p.add_option('-c', dest='config_filename',
+                     action='store', default=self.default_conf,
+                     help='Specify alternate configuration file name')
+        self.options, self.args = p.parse_args()
+        if not os.path.exists(self.options.config_filename):
+            p.error('configuration file not found: %s'
+                    % self.options.config_filename)
+
+
+
 
     def run(self):
         logging.debug("initializing spool")

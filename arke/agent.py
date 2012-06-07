@@ -49,12 +49,12 @@ class agent_daemon(object):
         self.stop_now = False
 
     def on_sighup(self, signalnum, frame):
-        logging.info("got sighup")
+        logger.info("got sighup")
         self.config_parser.read(self.config_filename)
         self.collect_manager.load(pool=self._gather_pool)
 
     def on_sigterm(self, signalnum, frame):
-        logging.info("got sigterm")
+        logger.info("got sigterm")
         self.stop_now = True
 
     def shutdown(self):
@@ -128,7 +128,7 @@ class agent_daemon(object):
 
 
     def run(self):
-        logging.debug("initializing spool")
+        logger.debug("initializing spool")
         config = self.config_parser
 
         self.spool = spool = Spooler(config)
@@ -162,7 +162,7 @@ class agent_daemon(object):
 
     def persist_runner(self):
         config = self.config_parser
-        logging.debug("initializing backend %s" % config.get('core', 'persist_backend'))
+        logger.debug("initializing backend %s" % config.get('core', 'persist_backend'))
         persist_backend = getattr(persist, '%s_backend' %
                 config.get('core', 'persist_backend'))
 
@@ -205,11 +205,11 @@ class agent_daemon(object):
             if self.stop_now:
                 return
             try:
-                logging.debug("persisting data- spool_file: %s, attempt: %r" % (spool_file.name, attempt))
+                logger.debug("persisting data- spool_file: %s, attempt: %r" % (spool_file.name, attempt))
                 persist_backend.batch_write(spool_file)
                 break
             except Exception:
-                logging.exception("attempt %s trying to persist spool_file: %s" % (attempt, spool_file.name))
+                logger.exception("attempt %s trying to persist spool_file: %s" % (attempt, spool_file.name))
 
             sleep(retry)
             if retry < RETRY_INTERVAL_CAP:

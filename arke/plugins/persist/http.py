@@ -25,9 +25,13 @@ class http_backend(ipersist):
             self.debug = self.config.getboolean('core', 'debug')
         else:
             self.debug = False
+        if self.config.has_option('core', 'timeout'):
+            self.timeout = self.config.getboolean('core', 'timeout')
+        else:
+            self.timeout = None
 
     def get_connection(self):
-        return httplib.HTTPConnection(self.host, self.port)
+        return httplib.HTTPConnection(self.host, self.port, timeout=self.timeout)
 
     def write(self, sourcetype, timestamp, data, hostname, extra):
         conn = self.get_connection()

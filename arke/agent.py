@@ -32,15 +32,13 @@ class NoPlugins(Exception): pass
 
 class agent_daemon(object):
     default_conf = '/etc/arke/arke.conf'
-    section = 'agent'
+    section = 'core'
 
     def read_basic_config(self):
         self.config_filename = self.options.config_filename
         cp = ConfigParser.ConfigParser()
         cp.read([self.config_filename])
         self.config_parser = cp
-
-
         self.hostname = self.config_parser.get('core', 'hostname')
 
     def __init__(self):
@@ -111,6 +109,7 @@ class agent_daemon(object):
         self.read_basic_config()
         self.add_signal_handlers()
         self.config_logging()
+        self.run()
 
 
     def parse_options(self):

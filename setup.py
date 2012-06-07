@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 import sys, os
 
-version = '0.4.2'
+version = '0.4.3'
 
 setup(name='arke',
       version=version,
@@ -10,9 +10,9 @@ setup(name='arke',
       classifiers=[], # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
       keywords='',
       author='Dominic LoBue',
-      author_email='dominic@geodelic.com',
+      author_email='dominic.lobue@gmail.com',
       url='',
-      license='proprietary',
+      license='GPLv3',
       packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
       include_package_data=True,
       zip_safe=False,
@@ -26,7 +26,6 @@ setup(name='arke',
           "paramiko",
           "boto>=2.0rc1",
           "psycopg2>=2.4.2",
-          "simpledaemon",
       ],
       entry_points="""
       # -*- Entry points: -*-

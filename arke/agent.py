@@ -62,10 +62,19 @@ class agent_daemon(Daemon):
 
     def run(self):
         logging.debug("initializing spool")
-        self.spool = spool = Spooler(self.config_parser)
-        self._gather_pool = pool = Pool(GATHER_POOL_WORKERS)
-
         config = self.config_parser
+
+        self.spool = spool = Spooler(config)
+
+        num_gather_workers = None
+        if config.has_option('core', 'gather_workers'):
+            num_gather_workers = abs(config.getint('core', 'gather_workers'))
+
+        if not num_gather_workers:
+            num_gather_workers = GATHER_POOL_WORKERS
+
+        self._gather_pool = pool = Pool(num_gather_workers)
+
         persist_queue = self.persist_queue
 
         self.collect_manager = CollectPlugins(base_class=Collect,
@@ -85,15 +94,23 @@ class agent_daemon(Daemon):
 
 
     def persist_runner(self):
-        logging.debug("initializing backend %s" % self.config_parser.get('core', 'persist_backend'))
+        config = self.config_parser
+        logging.debug("initializing backend %s" % config.get('core', 'persist_backend'))
         persist_backend = getattr(persist, '%s_backend' %
-                self.config_parser.get('core', 'persist_backend'))
+                config.get('core', 'persist_backend'))
 
-        persist_backend = persist_backend(self.config_parser)
+        persist_backend = persist_backend(config)
 
         spool = self.spool
 
-        self.persist_pool = pool = Pool(PERSIST_POOL_WORKERS)
+        num_persist_workers = None
+        if config.has_option('core', 'persist_workers'):
+            num_persist_workers = abs(config.getint('core', 'persist_workers'))
+
+        if not num_persist_workers:
+            num_persist_workers = PERSIST_POOL_WORKERS
+
+        self.persist_pool = pool = Pool(num_persist_workers)
 
         while 1:
             spool_file = None

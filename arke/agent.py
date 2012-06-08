@@ -2,7 +2,7 @@
 from gevent import monkey, sleep
 monkey.patch_all(httplib=True, thread=False)
 
-from Queue import Empty, Queue
+from Queue import Empty, LifoQueue
 import ConfigParser
 import optparse
 import os
@@ -42,7 +42,7 @@ class agent_daemon(object):
         self.hostname = self.config_parser.get('core', 'hostname')
 
     def __init__(self):
-        self.persist_queue = Queue()
+        self.persist_queue = LifoQueue()
         self.spool = None
         self.stop_now = False
 

@@ -13,6 +13,7 @@ class ssh_hello(MultiCollect):
     default_config = {'interval': 10,
                       'port': 22,
                       'region': None,
+                      'parallelism': 10,
                      }
 
     def _collect(self, server, start, host):

@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 import boto
 
 from arke.collect import Collect
+from arke.childpool import KiddiePool
 
 BATCH_MAX_WAIT = 2
 BATCH_INTERVAL = .1
@@ -18,6 +19,7 @@ class MultiCollect(Collect):
     format = 'extjson'
     default_config = {'interval': 10,
                       'region': None,
+                      'parallelism': 10,
                      }
 
 
@@ -90,7 +92,7 @@ class MultiCollect(Collect):
             persist_handler(data)
 
         total_servers = 0
-        pool = self._pool
+        pool = KiddiePool(self._pool, self.get_setting('parallelism', opt_type=int))
         for server in self.iter_servers():
             total_servers += 1
             pool.spawn(_gather, server)

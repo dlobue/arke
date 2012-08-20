@@ -20,6 +20,7 @@ class MultiCollect(Collect):
     default_config = {'interval': 10,
                       'region': None,
                       'parallelism': 10,
+                      'datapoints': 20,
                      }
 
 
@@ -56,10 +57,38 @@ class MultiCollect(Collect):
         region = self.get_setting('region')
         if region:
             query += " and ec2_region = '%s'" % region
+        query += " order by fqdn"
         logger.debug('looking for peers with the query: %s' % query)
-        servers = self.sdb_domain.select(query)
-        for server in servers:
-            yield server
+
+        hostname = self.config.get('core', 'hostname')
+        collection = remainder = []
+        top = []
+
+        for server in self.sdb_domain.select(query):
+            if server['fqdn'] == hostname:
+                collection = top
+                continue
+            collection.append(server)
+        collection.extend(remainder)
+        del remainder
+
+
+        datapoints = self.get_setting('datapoints', opt_type=int)
+        if datapoints >= len(collection):
+            interval = 1
+            begin = 0
+        else:
+            interval = len(collection)/datapoints
+            if not hasattr(self, '_interval_set'):
+                self._interval_set = 0
+            elif self._interval_set >= interval:
+                self._interval_set = 0
+            else:
+                self._interval_set += 1
+            begin = self._interval_set
+
+        for i in xrange(begin, datapoints*interval, interval):
+            yield collection[i]
 
     def gather_data(self):
         timestamp = datetime.utcnow()

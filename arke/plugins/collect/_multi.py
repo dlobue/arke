@@ -24,7 +24,7 @@ class MultiCollect(Collect):
                      }
 
 
-    def collect(self, server, hostname):
+    def collect(self, server):
         if 'ec2_public_hostname' in server:
             host = server['ec2_public_hostname']
         else:
@@ -41,7 +41,7 @@ class MultiCollect(Collect):
             log('socket %s: errno=%r, error msg=%s for server %s' % (e.__class__.__name__, e.errno, e.strerror, server['fqdn']))
             lag = -1
 
-        return {'from': hostname,
+        return {
                 'to': server['fqdn'],
                 'lag': lag
                }
@@ -93,14 +93,12 @@ class MultiCollect(Collect):
     def gather_data(self):
         timestamp = datetime.utcnow()
         sourcetype = self.name
-        extra = {'timestamp_as_id': True,
-                }
+        extra = {}
 
         #normalize timestamp so we can sync up with other servers
         second = timestamp.second - (timestamp.second % self.get_setting('interval', opt_type=int))
         timestamp = timestamp.replace(second=second, microsecond=0)
 
-        hostname = self.config.get('core', 'hostname')
         logger.debug("sourcetype: %r, timestamp: %s, extra: %r" % (sourcetype, timestamp, extra))
 
         data_batch = []
@@ -111,10 +109,8 @@ class MultiCollect(Collect):
         persist_handler = data_batch.append
 
         def _gather(server):
-            if server['fqdn'] == hostname:
-                return
             try:
-                data = self.collect(server, hostname)
+                data = self.collect(server)
             except Exception:
                 logger.exception("error occurred while gathering data for sourcetype %s" % sourcetype)
                 return
@@ -136,5 +132,5 @@ class MultiCollect(Collect):
         persist_handler = _persist
         if data_batch:
             logger.debug("Batched %i replies out of a total of %i" % (len(data_batch), total_servers))
-            _persist(data_batch)
+            map(_persist, data_batch)
 

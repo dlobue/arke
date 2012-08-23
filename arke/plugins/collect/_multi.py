@@ -68,8 +68,10 @@ class MultiCollect(Collect):
                 collection = top
                 continue
             collection.append(server)
-        collection.extend(remainder)
-        del remainder
+
+        if collection is top:
+            collection.extend(remainder)
+            del remainder
 
 
         datapoints = self.get_setting('datapoints', opt_type=int)
@@ -109,6 +111,7 @@ class MultiCollect(Collect):
         persist_handler = data_batch.append
 
         def _gather(server):
+            #logger.debug("Collecting data from server %s for the %s run" % (server['fqdn'], timestamp))
             try:
                 data = self.collect(server)
             except Exception:
@@ -116,10 +119,15 @@ class MultiCollect(Collect):
                 return
             persist_handler(data)
 
+        unique_check = set()
         total_servers = 0
         pool = KiddiePool(self._pool, self.get_setting('parallelism', opt_type=int))
         for server in self.iter_servers():
-            logger.debug("Collecting data from server %s for the %s run" % (server['fqdn'], timestamp))
+            if server['fqdn'] not in unique_check:
+                unique_check.add(server['fqdn'])
+            else:
+                logger.warning("told to check the same server %s twice in a single run?" % server['fqdn'])
+                continue
             total_servers += 1
             pool.spawn(_gather, server)
 

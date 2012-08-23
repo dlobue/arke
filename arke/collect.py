@@ -104,7 +104,7 @@ class Collect(object):
             return
 
         logger.debug("sourcetype: %r, timestamp: %s, extra: %r" % (sourcetype, timestamp, extra))
-        self.spool.append(sourcetype, timestamp, data, extra)
+        self.spool.append(sourcetype, timestamp, extra, data)
 
     def serialize(self, data):
         if not self.format:

@@ -73,8 +73,26 @@ class Spooler(object):
         map(_close, self._file_registry.values())
         self._remote_empties()
 
-    def append(self, sourcetype, timestamp, data, extra):
+    def extend(self, sourcetype, timestamp, extra, datas):
+        formatter = self._format
+        data = ''.join((formatter(timestamp, d) for d in datas))
+        self._write(sourcetype, timestamp, extra, data)
+        if self._not_empty._is_owned():
+            self._not_empty.notify()
+
+    def append(self, sourcetype, timestamp, extra, data):
+
+        data = self._format(timestamp, data)
+        self._write(sourcetype, timestamp, extra, data)
+
+        if self._not_empty._is_owned():
+            self._not_empty.notify()
+
+    def _format(self, timestamp, data):
         s = json_dumps([timestamp, data], default=json_util_default)
+        return str(len(s)) + '\n' + s
+
+    def _write(self, sourcetype, timestamp, extra, data):
 
         def _open():
             _f = self._get_file(sourcetype)
@@ -104,12 +122,10 @@ class Spooler(object):
                 _close(_f)
                 _f, _ = _open()
 
-            _f.write(str(len(s)) + '\n' + s)
+            _f.write(data)
             if _f.tell() > MAX_SPOOL_FILE_SIZE:
                 _close(_f)
 
-        if self._not_empty._is_owned():
-            self._not_empty.notify()
 
     def delete(self, file_handle):
         fn = file_handle.name

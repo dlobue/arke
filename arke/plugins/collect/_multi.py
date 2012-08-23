@@ -104,7 +104,7 @@ class MultiCollect(Collect):
         data_batch = []
 
         def _persist(data):
-            self.spool.append(sourcetype, timestamp, data, extra)
+            self.spool.append(sourcetype, timestamp, extra, data)
 
         persist_handler = data_batch.append
 
@@ -132,5 +132,5 @@ class MultiCollect(Collect):
         persist_handler = _persist
         if data_batch:
             logger.debug("Batched %i replies out of a total of %i" % (len(data_batch), total_servers))
-            map(_persist, data_batch)
+            self.spool.extend(sourcetype, timestamp, extra, data_batch)
 

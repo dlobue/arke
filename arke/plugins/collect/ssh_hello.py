@@ -29,7 +29,7 @@ class ssh_hello(MultiCollect):
 
             lag = time() - start
         except SSHException, e:
-            logger.info('ssh exception: %s for server %s' % (e, server['fqdn']))
+            logger.info('ssh exception: %s for server %s for the %s run' % (e, server['fqdn'], start))
             lag = -1
 
         return lag

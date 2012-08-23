@@ -41,10 +41,9 @@ class MultiCollect(Collect):
             log('socket %s: errno=%r, error msg=%s for server %s' % (e.__class__.__name__, e.errno, e.strerror, server['fqdn']))
             lag = -1
 
-        return {
-                'to': server['fqdn'],
-                'lag': lag
-               }
+        return dict(to=server['fqdn'],
+                    lag=lag
+                   )
 
     def iter_servers(self):
         if not hasattr(self, 'sdb_domain'):
@@ -93,7 +92,8 @@ class MultiCollect(Collect):
     def gather_data(self):
         timestamp = datetime.utcnow()
         sourcetype = self.name
-        extra = {}
+        extra = dict(multi='to') # multi is a key in the resulting data that can
+                                 # be used to make the record id unique
 
         #normalize timestamp so we can sync up with other servers
         second = timestamp.second - (timestamp.second % self.get_setting('interval', opt_type=int))

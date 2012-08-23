@@ -17,6 +17,7 @@ class latency(MultiCollect):
                       'server_backlog': 2048,
                       'region': None,
                       'parallelism': 10,
+                      'datapoints': 20,
                      }
 
     def activate(self):

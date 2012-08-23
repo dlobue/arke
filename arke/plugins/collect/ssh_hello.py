@@ -14,6 +14,7 @@ class ssh_hello(MultiCollect):
                       'port': 22,
                       'region': None,
                       'parallelism': 10,
+                      'datapoints': 20,
                      }
 
     def _collect(self, server, start, host):

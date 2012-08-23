@@ -119,6 +119,7 @@ class MultiCollect(Collect):
         total_servers = 0
         pool = KiddiePool(self._pool, self.get_setting('parallelism', opt_type=int))
         for server in self.iter_servers():
+            logger.debug("Collecting data from server %s for the %s run" % (server['fqdn'], timestamp))
             total_servers += 1
             pool.spawn(_gather, server)
 

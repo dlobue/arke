@@ -97,10 +97,6 @@ class MultiCollect(Collect):
         extra = dict(multi='to') # multi is a key in the resulting data that can
                                  # be used to make the record id unique
 
-        #normalize timestamp so we can sync up with other servers
-        second = timestamp.second - (timestamp.second % self.get_setting('interval', opt_type=int))
-        timestamp = timestamp.replace(second=second, microsecond=0)
-
         logger.debug("sourcetype: %r, timestamp: %s, extra: %r" % (sourcetype, timestamp, extra))
 
         data_batch = []

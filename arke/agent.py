@@ -182,6 +182,7 @@ class agent_daemon(object):
             spool_file = None
             if self.stop_now:
                 break
+            pool.wait_available()
             try:
                 spool_file = spool.get(5)
             except Empty:

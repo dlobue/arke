@@ -25,8 +25,8 @@ class http_backend(ipersist):
             self.debug = self.config.getboolean('core', 'debug')
         else:
             self.debug = False
-        if self.config.has_option('core', 'timeout'):
-            self.timeout = self.config.getboolean('core', 'timeout')
+        if self.config.has_option(self.section, 'timeout'):
+            self.timeout = self.config.getint(self.section, 'timeout')
         else:
             self.timeout = None
 

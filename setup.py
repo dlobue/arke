@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 import sys, os
 
-version = '0.4.7'
+version = '0.4.8'
 
 setup(name='arke',
       version=version,

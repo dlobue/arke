@@ -26,6 +26,7 @@ setup(name='arke',
           "paramiko",
           "boto>=2.0rc1",
           "psycopg2>=2.4.2",
+          "pyzmq>=2.1.11",
       ],
       entry_points="""
       # -*- Entry points: -*-

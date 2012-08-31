@@ -5,7 +5,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-import zmq.green as zmq
+try:
+    import zmq.green as zmq
+except ImportError:
+    from gevent_zeromq import zmq
+
 from gevent import sleep
 
 from .base import ipersist

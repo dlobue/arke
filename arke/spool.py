@@ -8,6 +8,7 @@ import logging
 from Queue import Empty
 from threading import Lock, Condition
 from collections import deque
+from struct import pack
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +91,10 @@ class Spooler(object):
 
     def _format(self, timestamp, data):
         s = json_dumps([timestamp, data], default=json_util_default)
-        return str(len(s)) + '\n' + s
+        #TODO: have json dump directly into the file. get the fp pos, +4 for
+        #size, dump, get new fp pos, generate length struct, insert, and go back
+        #to the end of the file.
+        return pack('>L', len(s)) + s
 
     def _write(self, sourcetype, timestamp, extra, data):
 
@@ -104,7 +108,7 @@ class Spooler(object):
                 extra['started_timestamp'] = timestamp
                 m = json_dumps([hostname, sourcetype, extra],
                                default=json_util_default)
-                _f.write(str(len(m)) + '\n' + m)
+                _f.write(pack('>L', len(m)) + m)
             return _f, new
 
         def _close(_f):

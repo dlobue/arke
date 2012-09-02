@@ -12,9 +12,9 @@ except ImportError:
 
 from gevent import sleep
 
+from arke.errors import PersistError
 from .base import ipersist
 
-class PersistError(Exception): pass
 
 class zmq_backend(ipersist):
     def __init__(self, *args, **kwargs):

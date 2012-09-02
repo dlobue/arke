@@ -20,6 +20,7 @@ from arke.collect import Collect
 from arke.plugin import CollectPlugins
 from arke.spool import Spooler
 from arke.plugins import persist
+from arke.errors import PersistError
 
 
 RETRY_INTERVAL_CAP = 300
@@ -28,8 +29,6 @@ DEFAULT_CONFIG_FILE = '/etc/arke/arke.conf'
 GATHER_POOL_WORKERS = 1000
 PERSIST_POOL_WORKERS = 10
 
-
-class NoPlugins(Exception): pass
 
 class agent_daemon(object):
     default_conf = '/etc/arke/arke.conf'
@@ -209,6 +208,8 @@ class agent_daemon(object):
                 logger.debug("persisting data- spool_file: %s, attempt: %r" % (spool_file.name, attempt))
                 persist_backend.batch_write(spool_file)
                 break
+            except PersistError:
+                logger.warn("attempt %s trying to persist spool_file: %s" % (attempt, spool_file.name))
             except Exception:
                 logger.exception("attempt %s trying to persist spool_file: %s" % (attempt, spool_file.name))
 

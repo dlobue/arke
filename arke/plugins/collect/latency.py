@@ -30,9 +30,10 @@ class latency(MultiCollect):
 
     def _start_server(self):
         def handler(sock, client_addr):
-            logger.debug("Got connection from: %s" % ':'.join(map(str, client_addr)))
+            logger.debug(f"Got connection from: {':'.join(map(str, client_addr))}")
             sock.recv(5)
             sock.sendall('PONG\n')
+
         self._server = StreamServer(
                          ('0.0.0.0', self.get_setting('port', opt_type=int)),
                          handle=handler,

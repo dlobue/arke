@@ -87,7 +87,7 @@ class system(Collect):
                     proto, cols = line.split(':')
                     cols = cols.split()
                     nproto, data = f.next().split(':')
-                    assert proto == nproto, "the format of %s has changed!" % fn
+                    assert proto == nproto, f"the format of {fn} has changed!"
                     proto_data = dict(zip(cols, map(int, data.split())))
 
                     protocols[proto] = proto_data
@@ -104,8 +104,8 @@ class system(Collect):
             f.readline()
             columnLine = f.readline()
             _, receiveCols , transmitCols = columnLine.split("|")
-            receiveCols = map(lambda a:"recv_"+a, receiveCols.split())
-            transmitCols = map(lambda a:"trans_"+a, transmitCols.split())
+            receiveCols = map(lambda a: f"recv_{a}", receiveCols.split())
+            transmitCols = map(lambda a: f"trans_{a}", transmitCols.split())
 
             cols = receiveCols+transmitCols
 

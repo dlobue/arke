@@ -42,11 +42,11 @@ class PluginManager(object):
 
         if entry_points is None:
             entry_points = self._entry_points
-            if entry_points is None:
-                return
+        if entry_points is None:
+            return
         if not hasattr(entry_points, '__iter__'):
             entry_points = [entry_points]
-            
+
         for entry_point_id in entry_points:
             for entry in working_set.iter_entry_points(entry_point_id):
                 logger.debug('Loading plugin %s from %s', entry.name, entry.dist.location)
@@ -55,7 +55,9 @@ class PluginManager(object):
                     module = entry.load(require=True)
                     self._modules.add(module)
                 except:
-                    logger.exception("Error loading plugin %s from %s" % (entry.name, entry.dist.location))
+                    logger.exception(
+                        f"Error loading plugin {entry.name} from {entry.dist.location}"
+                    )
 
     def load_plugin_dirs(self, plugin_dirs=None):
         if plugin_dirs is None:
@@ -69,9 +71,9 @@ class PluginManager(object):
 
         if not hasattr(plugin_dirs, '__iter__'):
             plugin_dirs = [plugin_dirs]
-            
+
         for path in plugin_dirs:
-            logger.debug("searching for plugins in %s" % path)
+            logger.debug(f"searching for plugins in {path}")
             for py_file in glob(os.path.join(path, '*.py')):
                 try:
                     module_name = os.path.basename(py_file[:-3])
@@ -80,12 +82,12 @@ class PluginManager(object):
                     if module_name in sys.modules:
                         self._modules.add(sys.modules[module_name])
                         continue
-                    
-                    logger.debug("Loading module %s" % py_file)
+
+                    logger.debug(f"Loading module {py_file}")
                     module = imp.load_source(module_name, py_file)
                     self._modules.add(module)
                 except Exception:
-                    logger.exception("Error loading module %s" % os.path.join(path, py_file))
+                    logger.exception(f"Error loading module {os.path.join(path, py_file)}")
 
 
     def load(self, base_class=None, **kwargs):
@@ -133,9 +135,9 @@ class CollectPlugins(PluginManager):
                 continue
 
             if not plugin.is_activated:
-                logger.info("activating plugin %s" % plugin.name)
+                logger.info(f"activating plugin {plugin.name}")
                 if 'pool' in kwargs:
-                    logger.debug("running activate method of plugin %s in greenlet" % plugin.name)
+                    logger.debug(f"running activate method of plugin {plugin.name} in greenlet")
                     kwargs['pool'].spawn(plugin.activate)
                 else:
                     plugin.activate()
@@ -169,7 +171,7 @@ class PersistPlugins(PluginManager):
 
         plugins = [ x for x in self._plugins if x.name == backend ]
         if not plugins:
-            logger.error("Requested backend %s not found!" % backend)
+            logger.error(f"Requested backend {backend} not found!")
             return #XXX do something better
         if len(plugins) > 1:
             logger.error("found multiple plugins with that name!")

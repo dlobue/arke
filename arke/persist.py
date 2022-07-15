@@ -49,8 +49,8 @@ class Persist(Component):
         self.hostname = self.root.config.get('core', 'hostname')
         b = self.root.config.get('core', 'persist_backend')
         b = b.lower()
-        h = self.root.config.get('backend:%s' % b, 'host')
-        p = self.root.config.get('backend:%s' % b, 'port')
+        h = self.root.config.get(f'backend:{b}', 'host')
+        p = self.root.config.get(f'backend:{b}', 'port')
         if b in ('http', 'https'):
             self._backends = backends = {}
             self._backend_state = {}
@@ -59,7 +59,7 @@ class Persist(Component):
                 backends[bid] = RetryHTTPClient(host=h, port=p, scheme=b, channel=bid).register(self)
                 self._backend_state[bid] = IDLE
         else:
-            logger.error("Invalid backend given: %s" % b)
+            logger.error(f"Invalid backend given: {b}")
             raise SystemExit
         Timer(CHECK_INTERVAL, Event(), 'persist', t=self, persist=True).register(self)
 
@@ -104,7 +104,7 @@ class Persist(Component):
 
 class HTTPClient(Client):
     def __init__(self, host, port, scheme, channel= None):
-        url = '%s://%s:%s/' % (scheme, host, port)
+        url = f'{scheme}://{host}:{port}/'
         if channel is None:
             channel = self.channel
         super(HTTPClient, self).__init__(url, channel=channel)

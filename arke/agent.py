@@ -120,8 +120,7 @@ class agent_daemon(object):
                      help='Specify alternate configuration file name')
         self.options, self.args = p.parse_args()
         if not os.path.exists(self.options.config_filename):
-            p.error('configuration file not found: %s'
-                    % self.options.config_filename)
+            p.error(f'configuration file not found: {self.options.config_filename}')
 
 
 
@@ -161,9 +160,11 @@ class agent_daemon(object):
 
     def persist_runner(self):
         config = self.config_parser
-        logger.debug("initializing backend %s" % config.get('core', 'persist_backend'))
-        persist_backend = getattr(persist, '%s_backend' %
-                config.get('core', 'persist_backend'))
+        logger.debug(f"initializing backend {config.get('core', 'persist_backend')}")
+        persist_backend = getattr(
+            persist, f"{config.get('core', 'persist_backend')}_backend"
+        )
+
 
         persist_backend = persist_backend(config)
 
@@ -178,11 +179,9 @@ class agent_daemon(object):
 
         self.persist_pool = pool = Pool(num_persist_workers)
 
-        while 1:
-            spool_file = None
-            if self.stop_now:
-                break
+        while 1 and not self.stop_now:
             pool.wait_available()
+            spool_file = None
             try:
                 spool_file = spool.get(5)
             except Empty:
@@ -209,9 +208,15 @@ class agent_daemon(object):
                 persist_backend.batch_write(spool_file)
                 break
             except PersistError:
-                logger.warn("attempt %s trying to persist spool_file: %s" % (attempt, spool_file.name))
+                logger.warn(
+                    f"attempt {attempt} trying to persist spool_file: {spool_file.name}"
+                )
+
             except Exception:
-                logger.exception("attempt %s trying to persist spool_file: %s" % (attempt, spool_file.name))
+                logger.exception(
+                    f"attempt {attempt} trying to persist spool_file: {spool_file.name}"
+                )
+
 
             sleep(retry)
             if retry < RETRY_INTERVAL_CAP:

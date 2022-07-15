@@ -133,14 +133,14 @@ class Spooler(object):
 
     def delete(self, file_handle):
         fn = file_handle.name
-        logger.debug("Deleting spool file %s" % fn)
+        logger.debug(f"Deleting spool file {fn}")
         file_handle.close()
         remove(fn)
 
     def get(self, timeout=None):
         if self._queue:
             _f = open(self._queue.pop(), 'r')
-            logger.debug("Returning spool_file %s from spooler queue." % _f.name)
+            logger.debug(f"Returning spool_file {_f.name} from spooler queue.")
             return _f
 
         with self._not_empty:
@@ -164,7 +164,7 @@ class Spooler(object):
 
                 if self._queue:
                     _f = open(self._queue.pop(), 'r')
-                    logger.debug("Returning spool_file %s from spooler queue." % _f.name)
+                    logger.debug(f"Returning spool_file {_f.name} from spooler queue.")
                     return _f
 
             sourcetype = not_empty[0]
@@ -174,6 +174,6 @@ class Spooler(object):
             _f.close()
             sr = self._sourcetype_registry
             sr.append( sr.pop( sr.index( sourcetype )))
-            logger.debug("Returning spool_file %s from spooler active registry." % _f.name)
+            logger.debug(f"Returning spool_file {_f.name} from spooler active registry.")
             return open(fname, 'r')
 

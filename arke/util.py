@@ -41,17 +41,13 @@ class GreenTimer(BaseComponent):
     def __init__(self, s, e, c="timer", t=None, persist=False, normalize=False):
         super(GreenTimer, self).__init__()
 
-        if isinstance(s, datetime):
-            self.s = mktime(s.timetuple()) - time()
-        else:
-            self.s = s
-
+        self.s = mktime(s.timetuple()) - time() if isinstance(s, datetime) else s
         self.e = e
         self.c = c
         self.t = t
         self.persist = persist
         self.normalize = normalize
-        
+
         self._timer = None
         self._lock = Lock()
 

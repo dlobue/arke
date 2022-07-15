@@ -53,11 +53,10 @@ class MultiCollect(Collect):
             self.sdb_domain = sdb.get_domain('chef')
 
         query = 'select fqdn,ec2_public_hostname from chef where fqdn is not null'
-        region = self.get_setting('region')
-        if region:
+        if region := self.get_setting('region'):
             query += " and ec2_region = '%s'" % region
         query += " order by fqdn"
-        logger.debug('looking for peers with the query: %s' % query)
+        logger.debug(f'looking for peers with the query: {query}')
 
         hostname = self.config.get('core', 'hostname')
         collection = remainder = []
@@ -80,9 +79,10 @@ class MultiCollect(Collect):
             begin = 0
         else:
             interval = len(collection)/datapoints
-            if not hasattr(self, '_interval_set'):
-                self._interval_set = 0
-            elif self._interval_set >= interval:
+            if (
+                not hasattr(self, '_interval_set')
+                or self._interval_set >= interval
+            ):
                 self._interval_set = 0
             else:
                 self._interval_set += 1
@@ -95,8 +95,6 @@ class MultiCollect(Collect):
         timestamp = datetime.utcnow()
         sourcetype = self.name
         extra = dict(multi='to') # multi is a key in the resulting data that can
-                                 # be used to make the record id unique
-
         logger.debug("sourcetype: %r, timestamp: %s, extra: %r" % (sourcetype, timestamp, extra))
 
         data_batch = []
@@ -111,7 +109,10 @@ class MultiCollect(Collect):
             try:
                 data = self.collect(server)
             except Exception:
-                logger.exception("error occurred while gathering data for sourcetype %s" % sourcetype)
+                logger.exception(
+                    f"error occurred while gathering data for sourcetype {sourcetype}"
+                )
+
                 return
             persist_handler(data)
 
@@ -122,15 +123,16 @@ class MultiCollect(Collect):
             if server['fqdn'] not in unique_check:
                 unique_check.add(server['fqdn'])
             else:
-                logger.warning("told to check the same server %s twice in a single run?" % server['fqdn'])
+                logger.warning(
+                    f"told to check the same server {server['fqdn']} twice in a single run?"
+                )
+
                 continue
             total_servers += 1
             pool.spawn(_gather, server)
 
         c = 0
-        while c < BATCH_MAX_WAIT:
-            if len(data_batch) == total_servers:
-                break
+        while c < BATCH_MAX_WAIT and len(data_batch) != total_servers:
             sleep(BATCH_INTERVAL)
             c += BATCH_INTERVAL
 

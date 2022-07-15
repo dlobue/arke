@@ -3,7 +3,7 @@
 class ipersist(object):
     def __init__(self, config_parser):
         self.config = config_parser
-        self.section = 'backend:%s' % self.__class__.__name__.replace('_backend', '')
+        self.section = f"backend:{self.__class__.__name__.replace('_backend', '')}"
 
     def batch_write(self, spool_file):
         raise NotImplemented

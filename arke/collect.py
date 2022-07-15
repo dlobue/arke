@@ -49,13 +49,14 @@ class Collect(object):
         self.config = config
         self.persist_queue = persist_queue
         self.name = self.__class__.__name__
-        self.section = 'plugin:%s' % self.name
+        self.section = f'plugin:{self.name}'
         if not hasattr(self, '_timer'):
             self._timer = None
         if not hasattr(self, 'is_activated'):
             self.is_activated = False
-        assert 'interval' in self.default_config, (
-            "Missing default interval value for %s plugin" % self.name)
+        assert (
+            'interval' in self.default_config
+        ), f"Missing default interval value for {self.name} plugin"
 
     @property
     def enabled(self):
@@ -83,7 +84,7 @@ class Collect(object):
 
     def run(self):
         self._timer = None
-        logger.debug("Doing run for %s plugin." % self.name)
+        logger.debug(f"Doing run for {self.name} plugin.")
         try:
             self.gather_data()
         finally:
@@ -98,9 +99,12 @@ class Collect(object):
 
         try:
             data = self.collect()
-            logger.debug("Data collection for %s plugin completed" % self.name)
+            logger.debug(f"Data collection for {self.name} plugin completed")
         except Exception:
-            logger.exception("error occurred while gathering data for sourcetype %s" % sourcetype)
+            logger.exception(
+                f"error occurred while gathering data for sourcetype {sourcetype}"
+            )
+
             return
 
         logger.debug("sourcetype: %r, timestamp: %s, extra: %r" % (sourcetype, timestamp, extra))

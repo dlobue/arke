@@ -45,8 +45,8 @@ class zmq_backend(ipersist):
         router = context.socket(zmq.ROUTER)
         req.setsockopt(zmq.LINGER, 0)
         router.setsockopt(zmq.LINGER, 0)
-        req.connect('tcp://%s:%s' % (self.host, self.port))
-        router.connect('tcp://%s:%s' % (self.host, self.port))
+        req.connect(f'tcp://{self.host}:{self.port}')
+        router.connect(f'tcp://{self.host}:{self.port}')
         return req,router
 
 

@@ -98,7 +98,10 @@ class postgres_repl(Collect):
                 logger.error("Connection to postgres servers was interrupted more than %i times - going to bail.")
                 raise NoConnection
             else:
-                logger.error("Lost connection to postgres server %s while retrieving WAL location. Going to try again." % host)
+                logger.error(
+                    f"Lost connection to postgres server {host} while retrieving WAL location. Going to try again."
+                )
+
                 sleep(5)
                 return self.run(attempt+1)
 

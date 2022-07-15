@@ -52,9 +52,14 @@ if __name__ == '__main__':
     child = KiddiePool(parent, 5)
 
     def myfunc(count):
-        print("%s, [%s] p:%s|%s c:%s|%s" % (datetime.now(), count, len(parent), parent.free_count(), len(child), child.free_count()))
+        print(
+            f"{datetime.now()}, [{count}] p:{len(parent)}|{parent.free_count()} c:{len(child)}|{child.free_count()}"
+        )
+
         sleep(randint(1, 5))
-        print("%s, [%s] p:%s|%s c:%s|%s" % (datetime.now(), count, len(parent), parent.free_count(), len(child), child.free_count()))
+        print(
+            f"{datetime.now()}, [{count}] p:{len(parent)}|{parent.free_count()} c:{len(child)}|{child.free_count()}"
+        )
 
     for i in xrange(20):
         child.spawn(myfunc, i)
